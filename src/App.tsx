@@ -1,10 +1,20 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import Layout from './components/Layout'
 import DayView from './pages/DayView'
-import WeekView from './pages/WeekView'
-import MonthView from './pages/MonthView'
-import Reports from './pages/Reports'
-import Projects from './pages/Projects'
+
+const WeekView = lazy(() => import('./pages/WeekView'))
+const MonthView = lazy(() => import('./pages/MonthView'))
+const Reports = lazy(() => import('./pages/Reports'))
+const Projects = lazy(() => import('./pages/Projects'))
+
+function Loading() {
+  return (
+    <div className="flex items-center justify-center py-20">
+      <div className="w-5 h-5 border-2 border-slate-200 border-t-slate-900 rounded-full animate-spin" />
+    </div>
+  )
+}
 
 export default function App() {
   return (
@@ -12,10 +22,10 @@ export default function App() {
       <Routes>
         <Route element={<Layout />}>
           <Route path="/" element={<DayView />} />
-          <Route path="/week" element={<WeekView />} />
-          <Route path="/month" element={<MonthView />} />
-          <Route path="/reports" element={<Reports />} />
-          <Route path="/projects" element={<Projects />} />
+          <Route path="/week" element={<Suspense fallback={<Loading />}><WeekView /></Suspense>} />
+          <Route path="/month" element={<Suspense fallback={<Loading />}><MonthView /></Suspense>} />
+          <Route path="/reports" element={<Suspense fallback={<Loading />}><Reports /></Suspense>} />
+          <Route path="/projects" element={<Suspense fallback={<Loading />}><Projects /></Suspense>} />
         </Route>
       </Routes>
     </BrowserRouter>
