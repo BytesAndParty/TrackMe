@@ -64,6 +64,50 @@ export function parseQuickEntry(input: string): ParsedEntry {
   return result
 }
 
+/**
+ * Smart time input parser. Accepts various formats:
+ * - "0900" / "900"  → "09:00"
+ * - "9:00" / "09:00" → "09:00"
+ * - "18,5" / "18.5" → "18:30" (decimal hours)
+ * - "8,25" → "08:15"
+ */
+export function parseTimeInput(raw: string): string | null {
+  const s = raw.trim()
+  if (!s) return null
+
+  // Decimal hours: 18,5 or 18.5 or 8,25
+  const decimalMatch = s.match(/^(\d{1,2})[,.](\d{1,2})$/)
+  if (decimalMatch) {
+    const hours = parseInt(decimalMatch[1])
+    const decPart = decimalMatch[2]
+    const fraction = parseInt(decPart) / Math.pow(10, decPart.length)
+    const minutes = Math.round(fraction * 60)
+    if (hours > 23 || minutes > 59) return null
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
+  }
+
+  // Standard HH:mm or H:mm
+  const colonMatch = s.match(/^(\d{1,2}):(\d{2})$/)
+  if (colonMatch) {
+    const hours = parseInt(colonMatch[1])
+    const minutes = parseInt(colonMatch[2])
+    if (hours > 23 || minutes > 59) return null
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
+  }
+
+  // Compact digits: 0900, 900, 1730
+  const compactMatch = s.match(/^(\d{3,4})$/)
+  if (compactMatch) {
+    const padded = compactMatch[1].padStart(4, '0')
+    const hours = parseInt(padded.slice(0, 2))
+    const minutes = parseInt(padded.slice(2, 4))
+    if (hours > 23 || minutes > 59) return null
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
+  }
+
+  return null
+}
+
 export function calculateDuration(start: string, end: string): number {
   const [sh, sm] = start.split(':').map(Number)
   const [eh, em] = end.split(':').map(Number)

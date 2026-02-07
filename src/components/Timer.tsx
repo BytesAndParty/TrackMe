@@ -60,6 +60,7 @@ export default function Timer() {
         endTime,
         durationMinutes: duration,
         projectId,
+        itemNr: '',
         taskText,
         notes: '',
       })

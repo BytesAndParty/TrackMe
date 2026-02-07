@@ -31,6 +31,7 @@ export interface TimeEntry {
   projectId?: number
   subProjectId?: number
   workItemLinkId?: number
+  itemNr: string
   taskText: string
   notes: string
 }
@@ -47,6 +48,17 @@ db.version(1).stores({
   subProjects: '++id, projectId, key, name',
   workItemLinks: '++id, itemId, projectId, subProjectId',
   timeEntries: '++id, date, projectId, subProjectId, workItemLinkId',
+})
+
+db.version(2).stores({
+  projects: '++id, key, name, active',
+  subProjects: '++id, projectId, key, name',
+  workItemLinks: '++id, itemId, projectId, subProjectId',
+  timeEntries: '++id, date, projectId, subProjectId, workItemLinkId, itemNr',
+}).upgrade(tx => {
+  return tx.table('timeEntries').toCollection().modify(entry => {
+    if (entry.itemNr === undefined) entry.itemNr = ''
+  })
 })
 
 export { db }
