@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db'
@@ -94,6 +94,8 @@ export default function Reports() {
   const allEntries = useLiveQuery(() => db.timeEntries.toArray()) ?? []
   const entries = allEntries.filter(e => e.date >= dateFrom && e.date <= dateTo)
   const projects = useLiveQuery(() => db.projects.toArray()) ?? []
+  const subProjects = useLiveQuery(() => db.subProjects.toArray()) ?? []
+  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set())
 
   const isDark = document.documentElement.classList.contains('dark')
   const colors = isDark ? COLORS_DARK : COLORS
@@ -291,32 +293,119 @@ export default function Reports() {
               </thead>
               <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
                 {pieData.map((row, i) => {
+                  const project = projects.find((p) => p.key === row.name)
                   const projectEntries = entries.filter(
-                    (e) => projects.find((p) => p.id === e.projectId)?.key === row.name
+                    (e) => e.projectId === project?.id
                   )
                   const pct = totalMinutes > 0 ? Math.round((row.value / totalMinutes) * 100) : 0
+                  const isExpanded = expandedProjects.has(row.name)
+                  const projectSubs = subProjects.filter((s) => s.projectId === project?.id)
+                  const hasSubData = projectSubs.length > 0
+
+                  // Build sub-project breakdown
+                  const subMinutes = new Map<number, number>()
+                  let noSubMinutes = 0
+                  if (isExpanded) {
+                    for (const e of projectEntries) {
+                      if (e.subProjectId) {
+                        subMinutes.set(e.subProjectId, (subMinutes.get(e.subProjectId) ?? 0) + e.durationMinutes)
+                      } else {
+                        noSubMinutes += e.durationMinutes
+                      }
+                    }
+                  }
+
                   return (
-                    <tr key={row.name} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
-                      <td className="px-6 py-3">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: colors[i % colors.length] }} />
-                          <span className="font-mono text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded">{row.name}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-3 text-right text-sm tabular-nums text-slate-600 dark:text-slate-400">{projectEntries.length}</td>
-                      <td className="px-6 py-3 text-right text-sm tabular-nums font-medium">{formatDuration(row.value)}</td>
-                      <td className="px-6 py-3 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <div className="w-16 h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                            <div
-                              className="h-full rounded-full"
-                              style={{ width: `${pct}%`, backgroundColor: colors[i % colors.length] }}
-                            />
+                    <Fragment key={row.name}>
+                      <tr
+                        className={`hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors ${hasSubData ? 'cursor-pointer' : ''}`}
+                        onClick={() => {
+                          if (!hasSubData) return
+                          setExpandedProjects((prev) => {
+                            const next = new Set(prev)
+                            if (next.has(row.name)) next.delete(row.name)
+                            else next.add(row.name)
+                            return next
+                          })
+                        }}
+                      >
+                        <td className="px-6 py-3">
+                          <div className="flex items-center gap-2">
+                            {hasSubData && (
+                              <svg
+                                width="12"
+                                height="12"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className={`text-slate-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                              >
+                                <polyline points="9 18 15 12 9 6" />
+                              </svg>
+                            )}
+                            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: colors[i % colors.length] }} />
+                            <span className="font-mono text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded">{row.name}</span>
                           </div>
-                          <span className="text-xs tabular-nums text-slate-500 dark:text-slate-400 w-8 text-right">{pct}%</span>
-                        </div>
-                      </td>
-                    </tr>
+                        </td>
+                        <td className="px-6 py-3 text-right text-sm tabular-nums text-slate-600 dark:text-slate-400">{projectEntries.length}</td>
+                        <td className="px-6 py-3 text-right text-sm tabular-nums font-medium">{formatDuration(row.value)}</td>
+                        <td className="px-6 py-3 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <div className="w-16 h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                              <div
+                                className="h-full rounded-full"
+                                style={{ width: `${pct}%`, backgroundColor: colors[i % colors.length] }}
+                              />
+                            </div>
+                            <span className="text-xs tabular-nums text-slate-500 dark:text-slate-400 w-8 text-right">{pct}%</span>
+                          </div>
+                        </td>
+                      </tr>
+                      {isExpanded && (
+                        <>
+                          {projectSubs
+                            .filter((s) => subMinutes.has(s.id!))
+                            .sort((a, b) => (subMinutes.get(b.id!) ?? 0) - (subMinutes.get(a.id!) ?? 0))
+                            .map((sub) => {
+                              const mins = subMinutes.get(sub.id!) ?? 0
+                              const subEntries = projectEntries.filter((e) => e.subProjectId === sub.id)
+                              const subPct = row.value > 0 ? Math.round((mins / row.value) * 100) : 0
+                              return (
+                                <tr key={`sub-${sub.id}`} className="bg-slate-50/50 dark:bg-slate-800/30">
+                                  <td className="px-6 py-2 pl-14">
+                                    <span className="font-mono text-xs text-slate-500 dark:text-slate-400">{sub.key}</span>
+                                    <span className="text-xs text-slate-400 dark:text-slate-500 ml-2">{sub.name}</span>
+                                  </td>
+                                  <td className="px-6 py-2 text-right text-xs tabular-nums text-slate-500 dark:text-slate-400">{subEntries.length}</td>
+                                  <td className="px-6 py-2 text-right text-xs tabular-nums text-slate-600 dark:text-slate-300">{formatDuration(mins)}</td>
+                                  <td className="px-6 py-2 text-right">
+                                    <span className="text-xs tabular-nums text-slate-400 dark:text-slate-500">{subPct}%</span>
+                                  </td>
+                                </tr>
+                              )
+                            })}
+                          {noSubMinutes > 0 && (
+                            <tr className="bg-slate-50/50 dark:bg-slate-800/30">
+                              <td className="px-6 py-2 pl-14">
+                                <span className="text-xs text-slate-400 dark:text-slate-500 italic">Ohne Unterprojekt</span>
+                              </td>
+                              <td className="px-6 py-2 text-right text-xs tabular-nums text-slate-500 dark:text-slate-400">
+                                {projectEntries.filter((e) => !e.subProjectId).length}
+                              </td>
+                              <td className="px-6 py-2 text-right text-xs tabular-nums text-slate-600 dark:text-slate-300">{formatDuration(noSubMinutes)}</td>
+                              <td className="px-6 py-2 text-right">
+                                <span className="text-xs tabular-nums text-slate-400 dark:text-slate-500">
+                                  {row.value > 0 ? Math.round((noSubMinutes / row.value) * 100) : 0}%
+                                </span>
+                              </td>
+                            </tr>
+                          )}
+                        </>
+                      )}
+                    </Fragment>
                   )
                 })}
               </tbody>
