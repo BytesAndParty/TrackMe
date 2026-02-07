@@ -15,39 +15,14 @@
 - [x] Tagesansicht mit editierbarem Grid + Summen
 - [x] Wochenansicht: Matrix Mo-So mit Projekt-Aggregation
 - [x] Monatsansicht: Heatmap-Kalender mit Statistiken
-- [x] Timer-Funktion: Start/Stop mit Auto-Save
 - [x] Projektverwaltung: CRUD + Unterprojekte
 - [x] Autovervollstaendigung fuer Projekte/Unterprojekte im Grid
 - [x] Reports: Balkendiagramm (Stunden/Woche), Donut (Projektverteilung), Projekttabelle
-
-## Offen
-
-### MVP - noch fehlend
-
-- [ ] Konfliktpruefung bei Zeitueberschneidungen (rote Markierung)
-- [ ] Work-Item-IDs + ADO-Link-Schema (per Klick oeffnen)
-- [ ] Unterprojekt-Statistik in Reports
-- [ ] Work-Item-Auswertung (#ID-basiert) in Reports
-- [ ] Liniendiagramm: Work-Item-Trend
-
-### Import / Export
-
-- [ ] CSV Export
-- [ ] XLSX Export
-- [ ] Excel-Import mit Mapping-Assistent
-- [ ] Duplikat-Check beim Import
-- [ ] Exportprofile (z.B. "myTE-Format")
-
-### Sonstiges
-
-- [ ] Taetigkeitsbeschreibung pro Unterprojekt/Tag zusammenfuehren
-- [ ] Einstellbarer Zeitraum fuer geleistete Stunden
-- [ ] PWA finalisieren: Icons, Splash Screen
-- [ ] Netlify Deployment einrichten
-
-### Nice-to-have (nach MVP)
-
-- [ ] PDF Export
-- [ ] Custom-Farbschema fuer Projekte
-- [ ] Lokale Datenverschluesselung (AES)
-- [ ] Automatische Backups der Datenbank
+- [x] Konflikterkennung bei Zeitueberschneidungen (rote Markierung)
+- [x] Per-Projekt Azure DevOps Link-Template ({itemNr} als Platzhalter)
+- [x] Unterprojekt-Statistik in Reports (aufklappbare Zeilen)
+- [x] Timer entfernt
+- [x] Favicon aktualisiert (TrackMe-Branding)
+- [x] Light/Dark Mode mit System-Praeferenz
+- [x] Custom-Farbschema fuer Projekte (Farbpalette + abgeleitete Unterprojekt-Farben)
+- [x] Kanban-Board fuer Item-Tracking
