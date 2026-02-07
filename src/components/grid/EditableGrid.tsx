@@ -117,6 +117,24 @@ export default function EditableGrid({ date, entries, projects, subProjects, ite
       return sum + (d > 0 ? d : 0)
     }, 0)
 
+  // Conflict detection: find rows with overlapping time ranges
+  const conflictRows = new Set<number>()
+  const validRows = rows
+    .map((r, i) => ({ index: i, start: r.startTime, end: r.endTime }))
+    .filter((r) => r.start && r.end && r.start < r.end)
+
+  for (let i = 0; i < validRows.length; i++) {
+    for (let j = i + 1; j < validRows.length; j++) {
+      const a = validRows[i]
+      const b = validRows[j]
+      // Overlap: a.start < b.end AND b.start < a.end
+      if (a.start < b.end && b.start < a.end) {
+        conflictRows.add(a.index)
+        conflictRows.add(b.index)
+      }
+    }
+  }
+
   const projectSuggestions = projects
     .filter((p) => p.active)
     .map((p) => ({ key: p.key, name: p.name, id: p.id! }))
@@ -198,12 +216,16 @@ export default function EditableGrid({ date, entries, projects, subProjects, ite
         <tbody>
           {rows.map((row, rowIndex) => {
             const isEmptyNew = row._isNew && !row._dirty
+            const hasConflict = conflictRows.has(rowIndex)
             return (
               <tr
                 key={row._id ?? `new-${rowIndex}`}
-                className={`group border-b border-slate-50 dark:border-slate-800 transition-colors ${
-                  isEmptyNew ? 'opacity-50' : ''
-                }`}
+                className={`group border-b transition-colors ${
+                  hasConflict
+                    ? 'border-red-200 dark:border-red-900/50 bg-red-50/50 dark:bg-red-900/10'
+                    : 'border-slate-50 dark:border-slate-800'
+                } ${isEmptyNew ? 'opacity-50' : ''}`}
+                title={hasConflict ? 'Zeitüberschneidung mit anderem Eintrag' : undefined}
               >
                 {/* Start */}
                 <td className="grid-cell">
@@ -341,7 +363,9 @@ export default function EditableGrid({ date, entries, projects, subProjects, ite
 
                 {/* Duration (read-only) */}
                 <td className="px-3 py-2 text-right">
-                  <span className="text-sm tabular-nums text-slate-500 dark:text-slate-400">
+                  <span className={`text-sm tabular-nums ${
+                    hasConflict ? 'text-red-500 dark:text-red-400 font-medium' : 'text-slate-500 dark:text-slate-400'
+                  }`}>
                     {computeDuration(row)}
                   </span>
                 </td>
