@@ -1,7 +1,7 @@
 import { Fragment, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../db'
+import { db, lightenColor } from '../db'
 import { formatDuration, formatDateShort, getWeekDates, toLocalISO, todayISO, getISOWeek } from '../lib/parser'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -98,7 +98,6 @@ export default function Reports() {
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set())
 
   const isDark = document.documentElement.classList.contains('dark')
-  const colors = isDark ? COLORS_DARK : COLORS
 
   // Adaptive chart data
   const fromDate = new Date(dateFrom + 'T00:00:00')
@@ -146,11 +145,16 @@ export default function Reports() {
       projectMinutes.set(e.projectId, (projectMinutes.get(e.projectId) ?? 0) + e.durationMinutes)
     }
   }
+  const fallbackColors = isDark ? COLORS_DARK : COLORS
   const pieData = Array.from(projectMinutes.entries())
-    .map(([id, mins]) => ({
-      name: projects.find((p) => p.id === id)?.key ?? '?',
-      value: mins,
-    }))
+    .map(([id, mins], i) => {
+      const proj = projects.find((p) => p.id === id)
+      return {
+        name: proj?.key ?? '?',
+        value: mins,
+        color: proj?.color ?? fallbackColors[i % fallbackColors.length],
+      }
+    })
     .sort((a, b) => b.value - a.value)
 
   const totalMinutes = entries.reduce((sum, e) => sum + e.durationMinutes, 0)
@@ -262,8 +266,8 @@ export default function Reports() {
                   paddingAngle={2}
                   dataKey="value"
                 >
-                  {pieData.map((_, i) => (
-                    <Cell key={i} fill={colors[i % colors.length]} />
+                  {pieData.map((d, i) => (
+                    <Cell key={i} fill={d.color} />
                   ))}
                 </Pie>
                 <Tooltip
@@ -292,7 +296,7 @@ export default function Reports() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
-                {pieData.map((row, i) => {
+                {pieData.map((row) => {
                   const project = projects.find((p) => p.key === row.name)
                   const projectEntries = entries.filter(
                     (e) => e.projectId === project?.id
@@ -346,7 +350,7 @@ export default function Reports() {
                                 <polyline points="9 18 15 12 9 6" />
                               </svg>
                             )}
-                            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: colors[i % colors.length] }} />
+                            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: row.color }} />
                             <span className="font-mono text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded">{row.name}</span>
                           </div>
                         </td>
@@ -357,7 +361,7 @@ export default function Reports() {
                             <div className="w-16 h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
                               <div
                                 className="h-full rounded-full"
-                                style={{ width: `${pct}%`, backgroundColor: colors[i % colors.length] }}
+                                style={{ width: `${pct}%`, backgroundColor: row.color }}
                               />
                             </div>
                             <span className="text-xs tabular-nums text-slate-500 dark:text-slate-400 w-8 text-right">{pct}%</span>
@@ -376,8 +380,11 @@ export default function Reports() {
                               return (
                                 <tr key={`sub-${sub.id}`} className="bg-slate-50/50 dark:bg-slate-800/30">
                                   <td className="px-6 py-2 pl-14">
-                                    <span className="font-mono text-xs text-slate-500 dark:text-slate-400">{sub.key}</span>
-                                    <span className="text-xs text-slate-400 dark:text-slate-500 ml-2">{sub.name}</span>
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: lightenColor(row.color, 0.3) }} />
+                                      <span className="font-mono text-xs text-slate-500 dark:text-slate-400">{sub.key}</span>
+                                      <span className="text-xs text-slate-400 dark:text-slate-500">{sub.name}</span>
+                                    </div>
                                   </td>
                                   <td className="px-6 py-2 text-right text-xs tabular-nums text-slate-500 dark:text-slate-400">{subEntries.length}</td>
                                   <td className="px-6 py-2 text-right text-xs tabular-nums text-slate-600 dark:text-slate-300">{formatDuration(mins)}</td>

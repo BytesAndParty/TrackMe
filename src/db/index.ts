@@ -5,6 +5,7 @@ export interface Project {
   key: string
   name: string
   active: boolean
+  color?: string // hex color, e.g. '#3b82f6'
   linkTemplate?: string // e.g. https://dev.azure.com/org/project/_workitems/edit/{itemNr}
 }
 
@@ -86,5 +87,39 @@ db.version(3).stores({
   timeEntries: '++id, date, projectId, subProjectId, workItemLinkId, itemNr',
   items: '++id, projectId, itemNr, status, sortOrder',
 })
+
+db.version(4).stores({
+  projects: '++id, key, name, active',
+  subProjects: '++id, projectId, key, name',
+  workItemLinks: '++id, itemId, projectId, subProjectId',
+  timeEntries: '++id, date, projectId, subProjectId, workItemLinkId, itemNr',
+  items: '++id, projectId, itemNr, status, sortOrder',
+})
+
+export const PROJECT_COLORS = [
+  '#3b82f6', // blue
+  '#10b981', // emerald
+  '#f59e0b', // amber
+  '#ef4444', // red
+  '#8b5cf6', // violet
+  '#ec4899', // pink
+  '#6366f1', // indigo
+  '#06b6d4', // cyan
+  '#f97316', // orange
+  '#14b8a6', // teal
+  '#64748b', // slate
+  '#84cc16', // lime
+]
+
+/** Lighten a hex color by mixing with white. amount 0-1 */
+export function lightenColor(hex: string, amount: number): string {
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  const lr = Math.round(r + (255 - r) * amount)
+  const lg = Math.round(g + (255 - g) * amount)
+  const lb = Math.round(b + (255 - b) * amount)
+  return `#${lr.toString(16).padStart(2, '0')}${lg.toString(16).padStart(2, '0')}${lb.toString(16).padStart(2, '0')}`
+}
 
 export { db }

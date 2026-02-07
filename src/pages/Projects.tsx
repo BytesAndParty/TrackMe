@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db, type Project } from '../db'
+import { db, type Project, PROJECT_COLORS } from '../db'
 
 export default function Projects() {
   const projects = useLiveQuery(() => db.projects.toArray()) ?? []
@@ -12,6 +12,7 @@ export default function Projects() {
   const [editName, setEditName] = useState('')
   const [editKey, setEditKey] = useState('')
   const [editLinkTemplate, setEditLinkTemplate] = useState('')
+  const [editColor, setEditColor] = useState('')
 
   const [subName, setSubName] = useState('')
   const [subKey, setSubKey] = useState('')
@@ -30,15 +31,20 @@ export default function Projects() {
     setEditName(p.name)
     setEditKey(p.key)
     setEditLinkTemplate(p.linkTemplate ?? '')
+    setEditColor(p.color ?? '')
   }
 
   async function saveEdit(id: number) {
-    await db.projects.update(id, { name: editName.trim(), key: editKey.trim().toLowerCase(), linkTemplate: editLinkTemplate.trim() || undefined })
+    await db.projects.update(id, { name: editName.trim(), key: editKey.trim().toLowerCase(), color: editColor || undefined, linkTemplate: editLinkTemplate.trim() || undefined })
     setEditingId(null)
   }
 
   async function saveLinkTemplate(id: number, template: string) {
     await db.projects.update(id, { linkTemplate: template.trim() || undefined })
+  }
+
+  async function saveColor(id: number, color: string) {
+    await db.projects.update(id, { color: color || undefined })
   }
 
   async function toggleActive(p: Project) {
@@ -152,6 +158,9 @@ export default function Projects() {
                   </>
                 ) : (
                   <>
+                    {p.color && (
+                      <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
+                    )}
                     <span className="font-mono text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded">
                       {p.key}
                     </span>
@@ -188,6 +197,24 @@ export default function Projects() {
               {/* Sub Projects */}
               {isExpanded && (
                 <div className="border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 px-4 py-3 space-y-3">
+                  {/* Project Color */}
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Projektfarbe</label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {PROJECT_COLORS.map((c) => (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => saveColor(p.id!, p.color === c ? '' : c)}
+                          className={`w-6 h-6 rounded-full transition-all ${
+                            p.color === c ? 'ring-2 ring-offset-2 ring-offset-white dark:ring-offset-slate-800 ring-slate-900 dark:ring-slate-100 scale-110' : 'hover:scale-110'
+                          }`}
+                          style={{ backgroundColor: c }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
                   {/* Link Template */}
                   <div>
                     <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
