@@ -1,11 +1,18 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db'
-import { todayISO, formatDateLong, formatDuration } from '../lib/parser'
+import { todayISO, toLocalISO, formatDateLong, formatDuration } from '../lib/parser'
 import EditableGrid from '../components/grid/EditableGrid'
 
 export default function DayView() {
-  const [selectedDate, setSelectedDate] = useState(todayISO())
+  const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const dateParam = searchParams.get('date')
+    if (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) return dateParam
+    return todayISO()
+  })
 
   const entries =
     useLiveQuery(
@@ -15,13 +22,23 @@ export default function DayView() {
 
   const projects = useLiveQuery(() => db.projects.toArray()) ?? []
   const subProjects = useLiveQuery(() => db.subProjects.toArray()) ?? []
+  const items = useLiveQuery(() => db.items.toArray()) ?? []
 
   const totalMinutes = entries.reduce((sum, e) => sum + (e.durationMinutes || 0), 0)
 
+  useEffect(() => {
+    const current = searchParams.get('date')
+    if (selectedDate === todayISO()) {
+      if (current) setSearchParams({}, { replace: true })
+    } else if (current !== selectedDate) {
+      setSearchParams({ date: selectedDate }, { replace: true })
+    }
+  }, [selectedDate])
+
   function navigateDay(offset: number) {
-    const d = new Date(selectedDate + 'T00:00:00')
+    const d = new Date(selectedDate + 'T12:00:00')
     d.setDate(d.getDate() + offset)
-    setSelectedDate(d.toISOString().slice(0, 10))
+    setSelectedDate(toLocalISO(d))
   }
 
   return (
@@ -69,6 +86,8 @@ export default function DayView() {
         entries={entries}
         projects={projects}
         subProjects={subProjects}
+        items={items}
+        onItemClick={(item) => navigate(`/items/${item.id}`)}
       />
 
       {/* Keyboard hint */}

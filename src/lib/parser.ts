@@ -105,6 +105,14 @@ export function parseTimeInput(raw: string): string | null {
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
   }
 
+  // Single/double digit: 8 → "08:00", 14 → "14:00"
+  const hourMatch = s.match(/^(\d{1,2})$/)
+  if (hourMatch) {
+    const hours = parseInt(hourMatch[1])
+    if (hours > 23) return null
+    return `${String(hours).padStart(2, '0')}:00`
+  }
+
   return null
 }
 
@@ -126,8 +134,15 @@ export function formatTime(time: string): string {
   return time
 }
 
+export function toLocalISO(d: Date): string {
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 export function todayISO(): string {
-  return new Date().toISOString().slice(0, 10)
+  return toLocalISO(new Date())
 }
 
 export function getWeekDates(date: Date): string[] {
@@ -139,7 +154,7 @@ export function getWeekDates(date: Date): string[] {
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(monday)
     d.setDate(monday.getDate() + i)
-    return d.toISOString().slice(0, 10)
+    return toLocalISO(d)
   })
 }
 
@@ -156,4 +171,20 @@ export function formatDateLong(isoDate: string): string {
     month: 'long',
     year: 'numeric',
   })
+}
+
+export function getISOWeek(date: Date): number {
+  const d = new Date(date.getTime())
+  d.setHours(0, 0, 0, 0)
+  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7))
+  const week1 = new Date(d.getFullYear(), 0, 4)
+  return 1 + Math.round(((d.getTime() - week1.getTime()) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7)
+}
+
+export function getMondayOfWeek(date: Date): Date {
+  const d = new Date(date)
+  const day = d.getDay()
+  const diff = day === 0 ? -6 : 1 - day
+  d.setDate(d.getDate() + diff)
+  return d
 }

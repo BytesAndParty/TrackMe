@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { type TimeEntry, type Project, type SubProject } from '../../db'
+import { type TimeEntry, type Project, type SubProject, type Item } from '../../db'
 import { useGridState, type GridRowData } from '../../hooks/useGridState'
 import { calculateDuration, formatDuration } from '../../lib/parser'
 import TimeCell from './TimeCell'
@@ -13,9 +13,11 @@ interface EditableGridProps {
   entries: TimeEntry[]
   projects: Project[]
   subProjects: SubProject[]
+  items: Item[]
+  onItemClick?: (item: Item) => void
 }
 
-export default function EditableGrid({ date, entries, projects, subProjects }: EditableGridProps) {
+export default function EditableGrid({ date, entries, projects, subProjects, items, onItemClick }: EditableGridProps) {
   const { rows, updateCell, commitRow, deleteRow, markEditing, unmarkEditing } = useGridState(
     date,
     entries,
@@ -127,8 +129,52 @@ export default function EditableGrid({ date, entries, projects, subProjects }: E
       .map((s) => ({ key: s.key, name: s.name, id: s.id! }))
   }
 
+  function getItemSuggestions(projectKey: string, subProjectKey: string) {
+    if (!projectKey) {
+      return items.map((item) => ({ key: item.itemNr, name: item.title, id: item.id! }))
+    }
+    const project = projects.find((p) => p.key.toLowerCase() === projectKey.toLowerCase())
+    if (!project) {
+      return items.map((item) => ({ key: item.itemNr, name: item.title, id: item.id! }))
+    }
+    const projectItems = items.filter((item) => item.projectId === project.id)
+
+    if (!subProjectKey) {
+      return projectItems.map((item) => ({ key: item.itemNr, name: item.title, id: item.id! }))
+    }
+
+    // Find subproject and filter items by entries that match both project + subproject
+    const subProject = subProjects.find(
+      (s) => s.projectId === project.id && s.key.toLowerCase() === subProjectKey.toLowerCase()
+    )
+    if (!subProject) {
+      return projectItems.map((item) => ({ key: item.itemNr, name: item.title, id: item.id! }))
+    }
+
+    // Get itemNrs that have entries with this subproject
+    const subProjectItemNrs = new Set(
+      entries
+        .filter((e) => e.projectId === project.id && e.subProjectId === subProject.id && e.itemNr)
+        .map((e) => e.itemNr)
+    )
+
+    // Items matching subproject first, then remaining project items
+    const matching = projectItems.filter((item) => subProjectItemNrs.has(item.itemNr))
+    const rest = projectItems.filter((item) => !subProjectItemNrs.has(item.itemNr))
+    return [...matching, ...rest].map((item) => ({ key: item.itemNr, name: item.title, id: item.id! }))
+  }
+
+  function findItem(itemNr: string, projectKey: string): Item | undefined {
+    if (!itemNr.trim()) return undefined
+    const project = projects.find((p) => p.key.toLowerCase() === projectKey.toLowerCase())
+    if (project) {
+      return items.find((i) => i.projectId === project.id && i.itemNr === itemNr.trim())
+    }
+    return items.find((i) => i.itemNr === itemNr.trim())
+  }
+
   return (
-    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
       <table className="w-full">
         <thead>
           <tr className="border-b border-slate-100">
@@ -218,15 +264,38 @@ export default function EditableGrid({ date, entries, projects, subProjects }: E
 
                 {/* Item Nr */}
                 <td className="grid-cell">
-                  <TextCell
-                    value={row.itemNr}
-                    onChange={(v) => updateCell(rowIndex, 'itemNr', v)}
-                    onKeyDown={(e) => handleCellKeyDown(e, rowIndex, 4)}
-                    inputRef={(el) => setCellRef(rowIndex, 4, el)}
-                    onFocus={() => markEditing(rowIndex)}
-                    onBlur={() => handleRowBlur(rowIndex)}
-                    placeholder="#"
-                  />
+                  <div className="flex items-center">
+                    <div className="flex-1">
+                      <AutocompleteCell
+                        value={row.itemNr}
+                        suggestions={getItemSuggestions(row.project, row.subProject)}
+                        onChange={(v) => updateCell(rowIndex, 'itemNr', v)}
+                        onKeyDown={(e) => handleCellKeyDown(e, rowIndex, 4)}
+                        inputRef={(el) => setCellRef(rowIndex, 4, el)}
+                        onFocus={() => markEditing(rowIndex)}
+                        onBlur={() => handleRowBlur(rowIndex)}
+                      />
+                    </div>
+                    {(() => {
+                      const item = findItem(row.itemNr, row.project)
+                      if (!item || !onItemClick) return null
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => onItemClick(item)}
+                          className="opacity-0 group-hover:opacity-100 p-1 text-slate-300 hover:text-emerald-600 transition-all shrink-0"
+                          tabIndex={-1}
+                          title="Item öffnen"
+                        >
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+                            <polyline points="15 3 21 3 21 9" />
+                            <line x1="10" y1="14" x2="21" y2="3" />
+                          </svg>
+                        </button>
+                      )
+                    })()}
+                  </div>
                 </td>
 
                 {/* Kommentar */}
