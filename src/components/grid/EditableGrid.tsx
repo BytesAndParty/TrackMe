@@ -173,6 +173,13 @@ export default function EditableGrid({ date, entries, projects, subProjects, ite
     return items.find((i) => i.itemNr === itemNr.trim())
   }
 
+  function buildItemUrl(itemNr: string, projectKey: string): string | null {
+    if (!itemNr.trim()) return null
+    const project = projects.find((p) => p.key.toLowerCase() === projectKey.toLowerCase())
+    if (!project?.linkTemplate) return null
+    return project.linkTemplate.replace('{itemNr}', itemNr.trim())
+  }
+
   return (
     <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-x-auto">
       <table className="w-full">
@@ -277,22 +284,43 @@ export default function EditableGrid({ date, entries, projects, subProjects, ite
                       />
                     </div>
                     {(() => {
+                      const itemUrl = buildItemUrl(row.itemNr, row.project)
                       const item = findItem(row.itemNr, row.project)
-                      if (!item || !onItemClick) return null
                       return (
-                        <button
-                          type="button"
-                          onClick={() => onItemClick(item)}
-                          className="opacity-0 group-hover:opacity-100 p-1 text-slate-300 dark:text-slate-600 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all shrink-0"
-                          tabIndex={-1}
-                          title="Item öffnen"
-                        >
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
-                            <polyline points="15 3 21 3 21 9" />
-                            <line x1="10" y1="14" x2="21" y2="3" />
-                          </svg>
-                        </button>
+                        <>
+                          {itemUrl && (
+                            <a
+                              href={itemUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="opacity-0 group-hover:opacity-100 p-1 text-slate-300 dark:text-slate-600 hover:text-blue-600 dark:hover:text-blue-400 transition-all shrink-0"
+                              tabIndex={-1}
+                              title="In Azure DevOps öffnen"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+                                <polyline points="15 3 21 3 21 9" />
+                                <line x1="10" y1="14" x2="21" y2="3" />
+                              </svg>
+                            </a>
+                          )}
+                          {item && onItemClick && !itemUrl && (
+                            <button
+                              type="button"
+                              onClick={() => onItemClick(item)}
+                              className="opacity-0 group-hover:opacity-100 p-1 text-slate-300 dark:text-slate-600 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all shrink-0"
+                              tabIndex={-1}
+                              title="Item öffnen"
+                            >
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+                                <polyline points="15 3 21 3 21 9" />
+                                <line x1="10" y1="14" x2="21" y2="3" />
+                              </svg>
+                            </button>
+                          )}
+                        </>
                       )
                     })()}
                   </div>

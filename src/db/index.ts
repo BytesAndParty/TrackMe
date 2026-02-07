@@ -5,6 +5,7 @@ export interface Project {
   key: string
   name: string
   active: boolean
+  linkTemplate?: string // e.g. https://dev.azure.com/org/project/_workitems/edit/{itemNr}
 }
 
 export interface SubProject {

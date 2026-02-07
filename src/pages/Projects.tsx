@@ -11,6 +11,7 @@ export default function Projects() {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editName, setEditName] = useState('')
   const [editKey, setEditKey] = useState('')
+  const [editLinkTemplate, setEditLinkTemplate] = useState('')
 
   const [subName, setSubName] = useState('')
   const [subKey, setSubKey] = useState('')
@@ -28,11 +29,16 @@ export default function Projects() {
     setEditingId(p.id!)
     setEditName(p.name)
     setEditKey(p.key)
+    setEditLinkTemplate(p.linkTemplate ?? '')
   }
 
   async function saveEdit(id: number) {
-    await db.projects.update(id, { name: editName.trim(), key: editKey.trim().toLowerCase() })
+    await db.projects.update(id, { name: editName.trim(), key: editKey.trim().toLowerCase(), linkTemplate: editLinkTemplate.trim() || undefined })
     setEditingId(null)
+  }
+
+  async function saveLinkTemplate(id: number, template: string) {
+    await db.projects.update(id, { linkTemplate: template.trim() || undefined })
   }
 
   async function toggleActive(p: Project) {
@@ -125,6 +131,12 @@ export default function Projects() {
                       className="flex-1 px-2 py-1 border border-slate-200 dark:border-slate-700 rounded text-sm bg-white dark:bg-slate-800"
                       onKeyDown={(e) => e.key === 'Enter' && saveEdit(p.id!)}
                     />
+                    <input
+                      value={editLinkTemplate}
+                      onChange={(e) => setEditLinkTemplate(e.target.value)}
+                      placeholder="Link-Template: https://.../{itemNr}"
+                      className="w-72 px-2 py-1 border border-slate-200 dark:border-slate-700 rounded bg-white dark:bg-slate-800 font-mono text-xs"
+                    />
                     <button
                       onClick={() => saveEdit(p.id!)}
                       className="text-xs px-3 py-1 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-md hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors"
@@ -175,7 +187,22 @@ export default function Projects() {
 
               {/* Sub Projects */}
               {isExpanded && (
-                <div className="border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 px-4 py-3 space-y-2">
+                <div className="border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 px-4 py-3 space-y-3">
+                  {/* Link Template */}
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+                      Link-Template <span className="text-slate-400 dark:text-slate-500 font-normal">({'{itemNr}'} wird durch die Item-Nr ersetzt)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={p.linkTemplate ?? ''}
+                      onChange={(e) => saveLinkTemplate(p.id!, e.target.value)}
+                      placeholder="z.B. https://dev.azure.com/org/project/_workitems/edit/{itemNr}"
+                      className="w-full px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md text-xs font-mono focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-100 focus:border-transparent"
+                    />
+                  </div>
+
+                  {/* Sub Projects */}
                   {subs.map((s) => (
                     <div key={s.id} className="flex items-center gap-3 py-1">
                       <span className="font-mono text-xs bg-white dark:bg-slate-700 text-slate-500 dark:text-slate-300 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-600">
