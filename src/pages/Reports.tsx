@@ -1,7 +1,8 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db'
-import { formatDuration, getWeekDates } from '../lib/parser'
+import { formatDuration, formatDateShort, getWeekDates, toLocalISO, todayISO, getISOWeek } from '../lib/parser'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
@@ -9,23 +10,127 @@ import {
 
 const COLORS = ['#0f172a', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1']
 
-export default function Reports() {
-  const [weeks] = useState(8)
+type RangePreset = 'this_week' | 'last_week' | 'pay_period' | 'last_month' | 'last_quarter' | 'this_year' | 'custom'
 
-  const entries = useLiveQuery(() => db.timeEntries.toArray()) ?? []
+const PRESET_LABELS: [RangePreset, string][] = [
+  ['this_week', 'Diese Woche'],
+  ['last_week', 'Letzte Woche'],
+  ['pay_period', 'Abrechnungszeitraum'],
+  ['last_month', 'Letzter Monat'],
+  ['last_quarter', 'Letztes Quartal'],
+  ['this_year', 'Dieses Jahr'],
+  ['custom', 'Benutzerdefiniert'],
+]
+
+function computeRange(preset: RangePreset, customFrom?: string, customTo?: string): { from: string; to: string } {
+  const today = new Date()
+  const todayStr = todayISO()
+  switch (preset) {
+    case 'this_week': {
+      const weekDates = getWeekDates(today)
+      return { from: weekDates[0], to: weekDates[6] }
+    }
+    case 'last_week': {
+      const d = new Date(today)
+      d.setDate(d.getDate() - 7)
+      const weekDates = getWeekDates(d)
+      return { from: weekDates[0], to: weekDates[6] }
+    }
+    case 'pay_period': {
+      const day = today.getDate()
+      const y = today.getFullYear()
+      const m = today.getMonth()
+      if (day <= 15) {
+        return {
+          from: toLocalISO(new Date(y, m, 1)),
+          to: toLocalISO(new Date(y, m, 15)),
+        }
+      } else {
+        const lastDay = new Date(y, m + 1, 0)
+        return {
+          from: toLocalISO(new Date(y, m, 16)),
+          to: toLocalISO(lastDay),
+        }
+      }
+    }
+    case 'last_month': {
+      const d = new Date(today.getFullYear(), today.getMonth() - 1, 1)
+      const lastDay = new Date(today.getFullYear(), today.getMonth(), 0)
+      return { from: toLocalISO(d), to: toLocalISO(lastDay) }
+    }
+    case 'last_quarter': {
+      const d = new Date(today)
+      d.setMonth(d.getMonth() - 3)
+      return { from: toLocalISO(d), to: todayStr }
+    }
+    case 'this_year': {
+      return { from: `${today.getFullYear()}-01-01`, to: todayStr }
+    }
+    case 'custom': {
+      return {
+        from: customFrom ?? toLocalISO(new Date(today.getFullYear(), today.getMonth() - 1, 1)),
+        to: customTo ?? todayStr,
+      }
+    }
+  }
+}
+
+export default function Reports() {
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  const [preset, setPreset] = useState<RangePreset>(() => {
+    if (searchParams.get('from') && searchParams.get('to')) return 'custom'
+    return 'last_month'
+  })
+
+  const urlFrom = searchParams.get('from') ?? undefined
+  const urlTo = searchParams.get('to') ?? undefined
+  const { from: dateFrom, to: dateTo } = computeRange(preset, urlFrom, urlTo)
+
+  const [customFrom, setCustomFrom] = useState(dateFrom)
+  const [customTo, setCustomTo] = useState(dateTo)
+
+  const allEntries = useLiveQuery(() => db.timeEntries.toArray()) ?? []
+  const entries = allEntries.filter(e => e.date >= dateFrom && e.date <= dateTo)
   const projects = useLiveQuery(() => db.projects.toArray()) ?? []
 
-  // Weekly data for bar chart (last N weeks)
-  const weeklyData: { label: string; minutes: number }[] = []
-  for (let i = weeks - 1; i >= 0; i--) {
-    const d = new Date()
-    d.setDate(d.getDate() - i * 7)
-    const dates = getWeekDates(d)
-    const mins = entries
-      .filter((e) => e.date >= dates[0] && e.date <= dates[6])
-      .reduce((sum, e) => sum + e.durationMinutes, 0)
-    const label = `KW${getISOWeek(d)}`
-    weeklyData.push({ label, minutes: mins })
+  // Adaptive chart data
+  const fromDate = new Date(dateFrom + 'T00:00:00')
+  const toDate = new Date(dateTo + 'T00:00:00')
+  const diffDays = Math.round((toDate.getTime() - fromDate.getTime()) / 86400000)
+
+  let chartData: { label: string; minutes: number }[]
+  let chartTitle: string
+
+  if (diffDays <= 14) {
+    chartTitle = 'Stunden pro Tag'
+    chartData = []
+    const d = new Date(fromDate)
+    while (d <= toDate) {
+      const iso = toLocalISO(d)
+      const mins = entries
+        .filter(e => e.date === iso)
+        .reduce((sum, e) => sum + e.durationMinutes, 0)
+      chartData.push({ label: formatDateShort(iso), minutes: mins })
+      d.setDate(d.getDate() + 1)
+    }
+  } else {
+    chartTitle = 'Stunden pro Woche'
+    chartData = []
+    const d = new Date(fromDate)
+    // Align to Monday
+    const dayOfWeek = d.getDay()
+    const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
+    d.setDate(d.getDate() + mondayOffset)
+
+    while (d <= toDate) {
+      const weekDates = getWeekDates(d)
+      const mins = entries
+        .filter(e => e.date >= weekDates[0] && e.date <= weekDates[6])
+        .reduce((sum, e) => sum + e.durationMinutes, 0)
+      chartData.push({ label: `KW${getISOWeek(d)}`, minutes: mins })
+      d.setDate(d.getDate() + 7)
+    }
   }
 
   // Project distribution for pie chart
@@ -44,27 +149,78 @@ export default function Reports() {
 
   const totalMinutes = entries.reduce((sum, e) => sum + e.durationMinutes, 0)
 
+  function selectPreset(p: RangePreset) {
+    setPreset(p)
+    if (p !== 'custom') {
+      const { from, to } = computeRange(p)
+      setSearchParams({ from, to }, { replace: true })
+      setCustomFrom(from)
+      setCustomTo(to)
+    }
+  }
+
+  function updateCustomRange(from: string, to: string) {
+    setCustomFrom(from)
+    setCustomTo(to)
+    setSearchParams({ from, to }, { replace: true })
+  }
+
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Reports</h1>
         <p className="text-slate-500 mt-1">
-          {formatDuration(totalMinutes)} erfasst &middot; {entries.length} Einträge &middot; {projects.length} Projekte
+          {formatDuration(totalMinutes)} erfasst &middot; {entries.length} Einträge &middot;{' '}
+          {formatDateShort(dateFrom)} – {formatDateShort(dateTo)}
         </p>
+      </div>
+
+      {/* Date Range Selection */}
+      <div className="flex flex-wrap items-center gap-2">
+        {PRESET_LABELS.map(([key, label]) => (
+          <button
+            key={key}
+            onClick={() => selectPreset(key)}
+            className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-colors ${
+              preset === key
+                ? 'bg-slate-900 text-white'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+        {preset === 'custom' && (
+          <div className="flex items-center gap-2 ml-2">
+            <input
+              type="date"
+              value={customFrom}
+              onChange={(e) => updateCustomRange(e.target.value, customTo)}
+              className="border border-slate-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+            />
+            <span className="text-slate-400 text-sm">–</span>
+            <input
+              type="date"
+              value={customTo}
+              onChange={(e) => updateCustomRange(customFrom, e.target.value)}
+              className="border border-slate-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+            />
+          </div>
+        )}
       </div>
 
       {entries.length === 0 ? (
         <div className="text-center py-16 text-slate-400">
-          <p className="text-lg">Noch keine Daten vorhanden.</p>
-          <p className="text-sm mt-1">Erstelle Zeiteinträge um Reports zu sehen.</p>
+          <p className="text-lg">Keine Daten im gewählten Zeitraum.</p>
+          <p className="text-sm mt-1">Wähle einen anderen Zeitraum oder erstelle Zeiteinträge.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Weekly Hours Bar Chart */}
+          {/* Bar Chart */}
           <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
-            <h2 className="text-sm font-medium text-slate-500 mb-4">Stunden pro Woche</h2>
+            <h2 className="text-sm font-medium text-slate-500 mb-4">{chartTitle}</h2>
             <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={weeklyData}>
+              <BarChart data={chartData}>
                 <XAxis dataKey="label" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
                 <YAxis
                   tick={{ fontSize: 11 }}
@@ -161,12 +317,4 @@ export default function Reports() {
       )}
     </div>
   )
-}
-
-function getISOWeek(date: Date): number {
-  const d = new Date(date.getTime())
-  d.setHours(0, 0, 0, 0)
-  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7))
-  const week1 = new Date(d.getFullYear(), 0, 4)
-  return 1 + Math.round(((d.getTime() - week1.getTime()) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7)
 }

@@ -30,11 +30,22 @@ export default function AutocompleteCell({
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   const filtered = value
-    ? suggestions.filter(
-        (s) =>
-          s.key.toLowerCase().includes(value.toLowerCase()) ||
-          s.name.toLowerCase().includes(value.toLowerCase())
-      )
+    ? suggestions
+        .filter(
+          (s) =>
+            s.key.toLowerCase().includes(value.toLowerCase()) ||
+            s.name.toLowerCase().includes(value.toLowerCase())
+        )
+        .sort((a, b) => {
+          const q = value.toLowerCase()
+          const rank = (s: Suggestion) => {
+            if (s.key.toLowerCase().startsWith(q)) return 0
+            if (s.name.toLowerCase().startsWith(q)) return 1
+            if (s.key.toLowerCase().includes(q)) return 2
+            return 3
+          }
+          return rank(a) - rank(b)
+        })
     : suggestions
 
   useEffect(() => {
@@ -47,6 +58,28 @@ export default function AutocompleteCell({
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
+    // Tab auto-completion works regardless of dropdown open state
+    if (e.key === 'Tab' && !e.shiftKey) {
+      if (filtered.length > 0 && value.length > 0) {
+        const exactMatch = filtered.find(
+          (s) => s.key.toLowerCase() === value.toLowerCase()
+        )
+        if (!exactMatch) {
+          // Partial match: auto-complete to top suggestion, stay in field
+          e.preventDefault()
+          const idx = Math.min(highlightIndex, filtered.length - 1)
+          onChange(filtered[idx].key)
+          setOpen(false)
+          return
+        }
+        // Exact match: normalize casing and navigate
+        onChange(exactMatch.key)
+      }
+      setOpen(false)
+      onKeyDown(e)
+      return
+    }
+
     if (open && filtered.length > 0) {
       if (e.key === 'ArrowDown') {
         e.preventDefault()
@@ -61,16 +94,6 @@ export default function AutocompleteCell({
       if (e.key === 'Enter') {
         e.preventDefault()
         selectItem(filtered[highlightIndex])
-        // Let the grid handle navigation after selection
-        return
-      }
-      if (e.key === 'Tab') {
-        // Accept highlighted suggestion, then let grid handle Tab
-        if (filtered.length > 0) {
-          selectItem(filtered[highlightIndex])
-        }
-        // Don't prevent default - let onKeyDown propagate for Tab navigation
-        onKeyDown(e)
         return
       }
       if (e.key === 'Escape') {

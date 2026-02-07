@@ -1,16 +1,31 @@
-import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db'
-import { getWeekDates, formatDateShort, formatDuration, todayISO } from '../lib/parser'
-import { useNavigate } from 'react-router-dom'
+import { getWeekDates, formatDateShort, formatDuration, todayISO, toLocalISO } from '../lib/parser'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 
 export default function WeekView() {
-  const [weekOffset, setWeekOffset] = useState(0)
+  const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
 
-  const baseDate = new Date()
-  baseDate.setDate(baseDate.getDate() + weekOffset * 7)
-  const weekDates = getWeekDates(baseDate)
+  const dateParam = searchParams.get('date')
+  const referenceDate = dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)
+    ? new Date(dateParam + 'T12:00:00')
+    : new Date()
+
+  const weekDates = getWeekDates(referenceDate)
+
+  const todayWeekDates = getWeekDates(new Date())
+  const isCurrentWeek = weekDates[0] === todayWeekDates[0]
+
+  function navigateWeek(offset: number) {
+    const d = new Date(referenceDate)
+    d.setDate(d.getDate() + offset * 7)
+    setSearchParams({ date: toLocalISO(d) }, { replace: true })
+  }
+
+  function resetToCurrentWeek() {
+    setSearchParams({}, { replace: true })
+  }
 
   const entries = useLiveQuery(
     () =>
@@ -69,7 +84,7 @@ export default function WeekView() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setWeekOffset(weekOffset - 1)}
+            onClick={() => navigateWeek(-1)}
             className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-500 hover:text-slate-700"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8l4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -81,15 +96,15 @@ export default function WeekView() {
             </p>
           </div>
           <button
-            onClick={() => setWeekOffset(weekOffset + 1)}
+            onClick={() => navigateWeek(1)}
             className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-500 hover:text-slate-700"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
           </button>
         </div>
-        {weekOffset !== 0 && (
+        {!isCurrentWeek && (
           <button
-            onClick={() => setWeekOffset(0)}
+            onClick={resetToCurrentWeek}
             className="text-xs px-3 py-1.5 bg-slate-100 text-slate-600 rounded-full hover:bg-slate-200 transition-colors font-medium"
           >
             Diese Woche
