@@ -48,7 +48,7 @@ export default function DayView() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigateDay(-1)}
-            className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-500 hover:text-slate-700"
+            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <path d="M10 12L6 8l4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -56,14 +56,14 @@ export default function DayView() {
           </button>
           <div>
             <h1 className="text-2xl font-bold tracking-tight">{formatDateLong(selectedDate)}</h1>
-            <p className="text-slate-500 text-sm">
+            <p className="text-slate-500 dark:text-slate-400 text-sm">
               {entries.length} {entries.length === 1 ? 'Eintrag' : 'Einträge'} &middot;{' '}
               {formatDuration(totalMinutes)} gesamt
             </p>
           </div>
           <button
             onClick={() => navigateDay(1)}
-            className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-500 hover:text-slate-700"
+            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -73,7 +73,7 @@ export default function DayView() {
         {selectedDate !== todayISO() && (
           <button
             onClick={() => setSelectedDate(todayISO())}
-            className="text-xs px-3 py-1.5 bg-slate-100 text-slate-600 rounded-full hover:bg-slate-200 transition-colors font-medium"
+            className="text-xs px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors font-medium"
           >
             Heute
           </button>
@@ -91,11 +91,11 @@ export default function DayView() {
       />
 
       {/* Keyboard hint */}
-      <div className="flex items-center gap-4 text-[11px] text-slate-400">
-        <span><kbd className="px-1 py-0.5 bg-slate-100 border border-slate-200 rounded text-[10px]">Tab</kbd> Nächste Zelle</span>
-        <span><kbd className="px-1 py-0.5 bg-slate-100 border border-slate-200 rounded text-[10px]">Enter</kbd> Nächste Zeile</span>
-        <span><kbd className="px-1 py-0.5 bg-slate-100 border border-slate-200 rounded text-[10px]">Esc</kbd> Abbrechen</span>
-        <span>Zeiteingabe: <code className="text-slate-500">0900</code> <code className="text-slate-500">9:00</code> <code className="text-slate-500">18,5</code></span>
+      <div className="flex items-center gap-4 text-[11px] text-slate-400 dark:text-slate-500">
+        <span><kbd className="px-1 py-0.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-[10px]">Tab</kbd> Nächste Zelle</span>
+        <span><kbd className="px-1 py-0.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-[10px]">Enter</kbd> Nächste Zeile</span>
+        <span><kbd className="px-1 py-0.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-[10px]">Esc</kbd> Abbrechen</span>
+        <span>Zeiteingabe: <code className="text-slate-500 dark:text-slate-400">0900</code> <code className="text-slate-500 dark:text-slate-400">9:00</code> <code className="text-slate-500 dark:text-slate-400">18,5</code></span>
       </div>
     </div>
   )

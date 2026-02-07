@@ -174,17 +174,17 @@ export default function EditableGrid({ date, entries, projects, subProjects, ite
   }
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
+    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-x-auto">
       <table className="w-full">
         <thead>
-          <tr className="border-b border-slate-100">
-            <th className="text-left text-xs font-medium text-slate-400 uppercase tracking-wider px-2 py-2.5 w-22">Start</th>
-            <th className="text-left text-xs font-medium text-slate-400 uppercase tracking-wider px-2 py-2.5 w-22">Ende</th>
-            <th className="text-left text-xs font-medium text-slate-400 uppercase tracking-wider px-2 py-2.5 w-32">Projekt</th>
-            <th className="text-left text-xs font-medium text-slate-400 uppercase tracking-wider px-2 py-2.5 w-32">Unterprojekt</th>
-            <th className="text-left text-xs font-medium text-slate-400 uppercase tracking-wider px-2 py-2.5 w-24">Item Nr</th>
-            <th className="text-left text-xs font-medium text-slate-400 uppercase tracking-wider px-2 py-2.5">Kommentar</th>
-            <th className="text-right text-xs font-medium text-slate-400 uppercase tracking-wider px-3 py-2.5 w-20">Dauer</th>
+          <tr className="border-b border-slate-100 dark:border-slate-700">
+            <th className="text-left text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider px-2 py-2.5 w-22">Start</th>
+            <th className="text-left text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider px-2 py-2.5 w-22">Ende</th>
+            <th className="text-left text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider px-2 py-2.5 w-32">Projekt</th>
+            <th className="text-left text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider px-2 py-2.5 w-32">Unterprojekt</th>
+            <th className="text-left text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider px-2 py-2.5 w-24">Item Nr</th>
+            <th className="text-left text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider px-2 py-2.5">Kommentar</th>
+            <th className="text-right text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider px-3 py-2.5 w-20">Dauer</th>
             <th className="w-10 py-2.5"></th>
           </tr>
         </thead>
@@ -194,7 +194,7 @@ export default function EditableGrid({ date, entries, projects, subProjects, ite
             return (
               <tr
                 key={row._id ?? `new-${rowIndex}`}
-                className={`group border-b border-slate-50 transition-colors ${
+                className={`group border-b border-slate-50 dark:border-slate-800 transition-colors ${
                   isEmptyNew ? 'opacity-50' : ''
                 }`}
               >
@@ -283,7 +283,7 @@ export default function EditableGrid({ date, entries, projects, subProjects, ite
                         <button
                           type="button"
                           onClick={() => onItemClick(item)}
-                          className="opacity-0 group-hover:opacity-100 p-1 text-slate-300 hover:text-emerald-600 transition-all shrink-0"
+                          className="opacity-0 group-hover:opacity-100 p-1 text-slate-300 dark:text-slate-600 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all shrink-0"
                           tabIndex={-1}
                           title="Item öffnen"
                         >
@@ -313,7 +313,7 @@ export default function EditableGrid({ date, entries, projects, subProjects, ite
 
                 {/* Duration (read-only) */}
                 <td className="px-3 py-2 text-right">
-                  <span className="text-sm tabular-nums text-slate-500">
+                  <span className="text-sm tabular-nums text-slate-500 dark:text-slate-400">
                     {computeDuration(row)}
                   </span>
                 </td>
@@ -324,7 +324,7 @@ export default function EditableGrid({ date, entries, projects, subProjects, ite
                     <button
                       type="button"
                       onClick={() => deleteRow(rowIndex)}
-                      className="opacity-0 group-hover:opacity-100 p-1 text-slate-300 hover:text-red-500 transition-all rounded"
+                      className="opacity-0 group-hover:opacity-100 p-1 text-slate-300 dark:text-slate-600 hover:text-red-500 transition-all rounded"
                       tabIndex={-1}
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -338,12 +338,12 @@ export default function EditableGrid({ date, entries, projects, subProjects, ite
           })}
         </tbody>
         <tfoot>
-          <tr className="border-t border-slate-200 bg-slate-50/50">
-            <td colSpan={6} className="px-2 py-2.5 text-xs font-medium text-slate-500">
+          <tr className="border-t border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
+            <td colSpan={6} className="px-2 py-2.5 text-xs font-medium text-slate-500 dark:text-slate-400">
               Gesamt
             </td>
             <td className="px-3 py-2.5 text-right">
-              <span className="text-sm tabular-nums font-bold text-slate-900">
+              <span className="text-sm tabular-nums font-bold">
                 {totalMinutes > 0 ? formatDuration(totalMinutes) : '–'}
               </span>
             </td>

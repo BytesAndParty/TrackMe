@@ -93,19 +93,19 @@ export default function MonthView() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigateMonth(-1)}
-            className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-500 hover:text-slate-700"
+            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8l4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
           </button>
           <div>
             <h1 className="text-2xl font-bold tracking-tight">{MONTH_NAMES[month]} {year}</h1>
-            <p className="text-slate-500 text-sm">
+            <p className="text-slate-500 dark:text-slate-400 text-sm">
               {formatDuration(totalMinutes)} gesamt &middot; {daysWorked} Tage &middot; ~{formatDuration(avgPerDay)}/Tag
             </p>
           </div>
           <button
             onClick={() => navigateMonth(1)}
-            className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-500 hover:text-slate-700"
+            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
           </button>
@@ -113,7 +113,7 @@ export default function MonthView() {
         {(year !== now.getFullYear() || month !== now.getMonth()) && (
           <button
             onClick={() => { setYear(now.getFullYear()); setMonth(now.getMonth()) }}
-            className="text-xs px-3 py-1.5 bg-slate-100 text-slate-600 rounded-full hover:bg-slate-200 transition-colors font-medium"
+            className="text-xs px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors font-medium"
           >
             Aktueller Monat
           </button>
@@ -121,14 +121,14 @@ export default function MonthView() {
       </div>
 
       {/* Calendar Grid */}
-      <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
         <div className="grid grid-cols-8 gap-1">
           {/* Header row */}
-          <div className="text-center text-xs font-medium text-slate-300 uppercase tracking-wider py-2">
+          <div className="text-center text-xs font-medium text-slate-300 dark:text-slate-600 uppercase tracking-wider py-2">
             KW
           </div>
           {DAY_LABELS.map((label) => (
-            <div key={label} className="text-center text-xs font-medium text-slate-400 uppercase tracking-wider py-2">
+            <div key={label} className="text-center text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider py-2">
               {label}
             </div>
           ))}
@@ -139,7 +139,7 @@ export default function MonthView() {
               {/* Week number cell */}
               <div
                 onClick={() => nav(`/week?date=${week.mondayDate}`)}
-                className="flex items-center justify-center aspect-square rounded-lg text-xs font-medium text-slate-300 hover:bg-blue-50 hover:text-blue-600 cursor-pointer transition-colors"
+                className="flex items-center justify-center aspect-square rounded-lg text-xs font-medium text-slate-300 dark:text-slate-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer transition-colors"
               >
                 {week.weekNumber}
               </div>
@@ -156,9 +156,9 @@ export default function MonthView() {
                   <div
                     key={date}
                     onClick={() => nav(`/?date=${date}`)}
-                    className={`relative aspect-square rounded-lg flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer hover:ring-2 hover:ring-blue-300 ${
+                    className={`relative aspect-square rounded-lg flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer hover:ring-2 hover:ring-blue-300 dark:hover:ring-blue-500 ${
                       isToday
-                        ? 'ring-2 ring-slate-900 ring-offset-1'
+                        ? 'ring-2 ring-slate-900 dark:ring-slate-100 ring-offset-1 dark:ring-offset-slate-900'
                         : ''
                     }`}
                     style={mins > 0 ? {
@@ -166,12 +166,12 @@ export default function MonthView() {
                     } : undefined}
                   >
                     <span className={`text-xs font-medium ${
-                      isToday ? 'text-slate-900' : mins > 0 ? 'text-emerald-900' : 'text-slate-400'
+                      isToday ? 'text-slate-900 dark:text-slate-100' : mins > 0 ? 'text-emerald-900 dark:text-emerald-100' : 'text-slate-400 dark:text-slate-500'
                     }`}>
                       {dayNum}
                     </span>
                     {mins > 0 && (
-                      <span className="text-[10px] font-medium text-emerald-800">
+                      <span className="text-[10px] font-medium text-emerald-800 dark:text-emerald-200">
                         {formatDuration(mins)}
                       </span>
                     )}

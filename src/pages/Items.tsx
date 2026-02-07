@@ -54,11 +54,11 @@ export default function Items() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-bold text-slate-900">Items</h1>
+        <h1 className="text-xl font-bold">Items</h1>
         <select
           value={filterProjectId ?? ''}
           onChange={(e) => setFilterProjectId(e.target.value ? Number(e.target.value) : undefined)}
-          className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+          className="text-sm border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-900/10 dark:focus:ring-slate-100/10"
         >
           <option value="">Alle Projekte</option>
           {projects

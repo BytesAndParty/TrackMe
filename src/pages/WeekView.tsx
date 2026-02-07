@@ -85,19 +85,19 @@ export default function WeekView() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigateWeek(-1)}
-            className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-500 hover:text-slate-700"
+            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8l4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
           </button>
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Wochenansicht</h1>
-            <p className="text-slate-500 text-sm">
+            <p className="text-slate-500 dark:text-slate-400 text-sm">
               {formatDateShort(weekDates[0])} – {formatDateShort(weekDates[6])} &middot; {formatDuration(weekTotal)} gesamt
             </p>
           </div>
           <button
             onClick={() => navigateWeek(1)}
-            className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-500 hover:text-slate-700"
+            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
           </button>
@@ -105,7 +105,7 @@ export default function WeekView() {
         {!isCurrentWeek && (
           <button
             onClick={resetToCurrentWeek}
-            className="text-xs px-3 py-1.5 bg-slate-100 text-slate-600 rounded-full hover:bg-slate-200 transition-colors font-medium"
+            className="text-xs px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors font-medium"
           >
             Diese Woche
           </button>
@@ -113,36 +113,36 @@ export default function WeekView() {
       </div>
 
       {/* Week Matrix */}
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-slate-100">
-                <th className="text-left text-xs font-medium text-slate-400 uppercase tracking-wider px-4 py-3 sticky left-0 bg-white min-w-35">
+              <tr className="border-b border-slate-100 dark:border-slate-700">
+                <th className="text-left text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider px-4 py-3 sticky left-0 bg-white dark:bg-slate-900 min-w-35">
                   Projekt
                 </th>
                 {weekDates.map((date) => (
                   <th
                     key={date}
-                    className={`text-center text-xs font-medium uppercase tracking-wider px-3 py-3 min-w-22.5 cursor-pointer hover:bg-slate-50 transition-colors ${
+                    className={`text-center text-xs font-medium uppercase tracking-wider px-3 py-3 min-w-22.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors ${
                       date === today
-                        ? 'text-slate-900 bg-blue-50/50'
-                        : 'text-slate-400'
+                        ? 'text-slate-900 dark:text-slate-100 bg-blue-50/50 dark:bg-blue-900/20'
+                        : 'text-slate-400 dark:text-slate-500'
                     }`}
                     onClick={() => navigateToDay(date)}
                   >
                     {formatDateShort(date)}
                   </th>
                 ))}
-                <th className="text-center text-xs font-medium text-slate-400 uppercase tracking-wider px-3 py-3 min-w-20">
+                <th className="text-center text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider px-3 py-3 min-w-20">
                   Summe
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
               {rows.size === 0 ? (
                 <tr>
-                  <td colSpan={9} className="text-center py-12 text-slate-400">
+                  <td colSpan={9} className="text-center py-12 text-slate-400 dark:text-slate-500">
                     <p>Keine Einträge diese Woche.</p>
                   </td>
                 </tr>
@@ -150,14 +150,14 @@ export default function WeekView() {
                 Array.from(rows.entries()).map(([key, row]) => {
                   const rowTotal = Array.from(row.byDay.values()).reduce((a, b) => a + b, 0)
                   return (
-                    <tr key={key} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-4 py-3 sticky left-0 bg-white">
+                    <tr key={key} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
+                      <td className="px-4 py-3 sticky left-0 bg-white dark:bg-slate-900">
                         <div className="flex items-center gap-2">
-                          <span className="font-mono text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded">
+                          <span className="font-mono text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded">
                             {getProjectKey(row.projectId)}
                           </span>
                           {row.subProjectId && (
-                            <span className="font-mono text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded">
+                            <span className="font-mono text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded">
                               {getSubProjectKey(row.subProjectId)}
                             </span>
                           )}
@@ -169,21 +169,21 @@ export default function WeekView() {
                           <td
                             key={date}
                             className={`text-center px-3 py-3 ${
-                              date === today ? 'bg-blue-50/30' : ''
+                              date === today ? 'bg-blue-50/30 dark:bg-blue-900/10' : ''
                             }`}
                           >
                             {mins > 0 ? (
-                              <span className="text-sm tabular-nums font-medium text-slate-700">
+                              <span className="text-sm tabular-nums font-medium text-slate-700 dark:text-slate-300">
                                 {formatDuration(mins)}
                               </span>
                             ) : (
-                              <span className="text-slate-200">·</span>
+                              <span className="text-slate-200 dark:text-slate-700">·</span>
                             )}
                           </td>
                         )
                       })}
                       <td className="text-center px-3 py-3">
-                        <span className="text-sm tabular-nums font-bold text-slate-900">
+                        <span className="text-sm tabular-nums font-bold">
                           {formatDuration(rowTotal)}
                         </span>
                       </td>
@@ -193,8 +193,8 @@ export default function WeekView() {
               )}
             </tbody>
             <tfoot>
-              <tr className="border-t border-slate-200 bg-slate-50/50">
-                <td className="px-4 py-3 text-xs font-medium text-slate-500 sticky left-0 bg-slate-50/50">
+              <tr className="border-t border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
+                <td className="px-4 py-3 text-xs font-medium text-slate-500 dark:text-slate-400 sticky left-0 bg-slate-50/50 dark:bg-slate-800/50">
                   Tagesgesamt
                 </td>
                 {weekDates.map((date) => {
@@ -202,20 +202,20 @@ export default function WeekView() {
                   return (
                     <td
                       key={date}
-                      className={`text-center px-3 py-3 ${date === today ? 'bg-blue-50/30' : ''}`}
+                      className={`text-center px-3 py-3 ${date === today ? 'bg-blue-50/30 dark:bg-blue-900/10' : ''}`}
                     >
                       {total > 0 ? (
-                        <span className="text-sm tabular-nums font-bold text-slate-900">
+                        <span className="text-sm tabular-nums font-bold">
                           {formatDuration(total)}
                         </span>
                       ) : (
-                        <span className="text-slate-300 text-sm">–</span>
+                        <span className="text-slate-300 dark:text-slate-600 text-sm">–</span>
                       )}
                     </td>
                   )
                 })}
                 <td className="text-center px-3 py-3">
-                  <span className="text-sm tabular-nums font-black text-slate-900">
+                  <span className="text-sm tabular-nums font-black">
                     {formatDuration(weekTotal)}
                   </span>
                 </td>

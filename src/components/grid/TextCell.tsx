@@ -30,7 +30,7 @@ export default function TextCell({
       }}
       onBlur={onBlur}
       placeholder={placeholder}
-      className="w-full bg-transparent px-2 py-2 text-sm outline-none placeholder:text-slate-300"
+      className="w-full bg-transparent px-2 py-2 text-sm outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600"
     />
   )
 }

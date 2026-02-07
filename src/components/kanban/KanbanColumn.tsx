@@ -29,8 +29,8 @@ export default function KanbanColumn({
 
   return (
     <div
-      className={`flex flex-col rounded-xl bg-slate-50 border transition-colors min-h-[200px] ${
-        dragOver ? 'border-emerald-400 bg-emerald-50/30' : 'border-slate-200'
+      className={`flex flex-col rounded-xl bg-slate-50 dark:bg-slate-800/50 border transition-colors min-h-50 ${
+        dragOver ? 'border-emerald-400 bg-emerald-50/30 dark:bg-emerald-900/10' : 'border-slate-200 dark:border-slate-700'
       }`}
       onDragOver={(e) => {
         e.preventDefault()
@@ -45,17 +45,17 @@ export default function KanbanColumn({
         if (itemId) onDrop(itemId, status)
       }}
     >
-      <div className="flex items-center justify-between px-3 py-2.5 border-b border-slate-200">
+      <div className="flex items-center justify-between px-3 py-2.5 border-b border-slate-200 dark:border-slate-700">
         <div className="flex items-center gap-2">
-          <h3 className="text-sm font-semibold text-slate-700">{title}</h3>
-          <span className="text-xs text-slate-400 bg-slate-200/60 px-1.5 py-0.5 rounded-full">
+          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">{title}</h3>
+          <span className="text-xs text-slate-400 dark:text-slate-500 bg-slate-200/60 dark:bg-slate-700/60 px-1.5 py-0.5 rounded-full">
             {items.length}
           </span>
         </div>
         <button
           type="button"
           onClick={() => onAddItem(status)}
-          className="text-slate-400 hover:text-slate-600 transition-colors"
+          className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
           title="Neues Item"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -74,7 +74,7 @@ export default function KanbanColumn({
           />
         ))}
         {items.length === 0 && (
-          <p className="text-xs text-slate-300 text-center py-8">Keine Items</p>
+          <p className="text-xs text-slate-300 dark:text-slate-600 text-center py-8">Keine Items</p>
         )}
       </div>
     </div>

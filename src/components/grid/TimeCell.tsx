@@ -84,7 +84,7 @@ export default function TimeCell({
       onBlur={handleBlur}
       placeholder="00:00"
       maxLength={6}
-      className={`w-full bg-transparent px-2 py-2 text-sm font-mono outline-none placeholder:text-slate-300 ${
+      className={`w-full bg-transparent px-2 py-2 text-sm font-mono outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600 ${
         invalid ? 'text-red-500' : ''
       }`}
     />

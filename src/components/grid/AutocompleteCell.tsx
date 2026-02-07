@@ -130,19 +130,19 @@ export default function AutocompleteCell({
         }}
         onBlur={handleBlur}
         placeholder="–"
-        className="w-full bg-transparent px-2 py-2 text-sm font-mono outline-none placeholder:text-slate-300"
+        className="w-full bg-transparent px-2 py-2 text-sm font-mono outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600"
       />
       {open && filtered.length > 0 && (
         <div
           ref={dropdownRef}
-          className="absolute left-0 top-full mt-0.5 w-52 bg-white border border-slate-200 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto"
+          className="absolute left-0 top-full mt-0.5 w-52 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto"
         >
           {filtered.map((item, i) => (
             <button
               key={item.id}
               type="button"
               className={`w-full text-left px-3 py-1.5 text-sm flex items-center gap-2 transition-colors ${
-                i === highlightIndex ? 'bg-slate-100' : 'hover:bg-slate-50'
+                i === highlightIndex ? 'bg-slate-100 dark:bg-slate-700' : 'hover:bg-slate-50 dark:hover:bg-slate-700/50'
               }`}
               onMouseDown={(e) => {
                 e.preventDefault()
@@ -150,10 +150,10 @@ export default function AutocompleteCell({
               }}
               onMouseEnter={() => setHighlightIndex(i)}
             >
-              <span className="font-mono text-xs bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">
+              <span className="font-mono text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded">
                 {item.key}
               </span>
-              <span className="text-slate-500 truncate">{item.name}</span>
+              <span className="text-slate-500 dark:text-slate-400 truncate">{item.name}</span>
             </button>
           ))}
         </div>

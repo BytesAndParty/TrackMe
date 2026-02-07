@@ -84,21 +84,23 @@ export default function ItemDetailModal({
     done: 'Erledigt',
   }
 
+  const inputClass = "w-full border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 dark:focus:ring-slate-100/10"
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center">
+    <div className="fixed inset-0 z-100 flex items-center justify-center">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/30" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/30 dark:bg-black/50" onClick={onClose} />
 
       {/* Panel */}
-      <div className="relative bg-white rounded-xl shadow-xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-slate-900">
+      <div className="relative bg-white dark:bg-slate-900 rounded-xl shadow-xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+          <h2 className="text-lg font-bold">
             {isEdit ? 'Item bearbeiten' : 'Neues Item'}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 transition-colors"
+            className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
@@ -109,11 +111,11 @@ export default function ItemDetailModal({
         <div className="px-6 py-4 space-y-4">
           {/* Projekt */}
           <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">Projekt *</label>
+            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Projekt *</label>
             <select
               value={projectId}
               onChange={(e) => setProjectId(e.target.value ? Number(e.target.value) : '')}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+              className={inputClass}
             >
               <option value="">Projekt wählen...</option>
               {projects
@@ -129,21 +131,21 @@ export default function ItemDetailModal({
           {/* Item Nr + Status */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Item Nr</label>
+              <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Item Nr</label>
               <input
                 type="text"
                 value={itemNr}
                 onChange={(e) => setItemNr(e.target.value)}
                 placeholder="z.B. 1234"
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                className={`${inputClass} font-mono`}
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Status</label>
+              <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Status</label>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as ItemStatus)}
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                className={inputClass}
               >
                 {(Object.entries(statusLabels) as [ItemStatus, string][]).map(([key, label]) => (
                   <option key={key} value={key}>
@@ -156,55 +158,55 @@ export default function ItemDetailModal({
 
           {/* Titel */}
           <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">Titel *</label>
+            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Titel *</label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Kurzbeschreibung des Items"
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+              className={inputClass}
             />
           </div>
 
           {/* Beschreibung */}
           <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">Beschreibung</label>
+            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Beschreibung</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
               placeholder="Details zum Item..."
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10 resize-none"
+              className={`${inputClass} resize-none`}
             />
           </div>
 
           {/* URL */}
           <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">URL</label>
+            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">URL</label>
             <input
               type="url"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder="https://dev.azure.com/..."
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+              className={inputClass}
             />
           </div>
 
           {/* Notizen */}
           <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">Persönliche Notizen</label>
+            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Persönliche Notizen</label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={10}
               placeholder="Eigene Notizen zu diesem Item..."
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10 resize-none"
+              className={`${inputClass} resize-none`}
             />
           </div>
         </div>
 
         {/* Actions */}
-        <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between">
+        <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between">
           <div>
             {isEdit && (
               confirmDelete ? (
@@ -220,7 +222,7 @@ export default function ItemDetailModal({
                   <button
                     type="button"
                     onClick={() => setConfirmDelete(false)}
-                    className="text-xs font-medium text-slate-500 hover:text-slate-700"
+                    className="text-xs font-medium text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
                   >
                     Nein
                   </button>
@@ -240,7 +242,7 @@ export default function ItemDetailModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
             >
               Abbrechen
             </button>
@@ -248,7 +250,7 @@ export default function ItemDetailModal({
               type="button"
               onClick={handleSave}
               disabled={!projectId || !title.trim()}
-              className="px-4 py-2 text-sm font-medium text-white bg-slate-900 rounded-lg hover:bg-slate-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="px-4 py-2 text-sm font-medium text-white bg-slate-900 dark:bg-slate-100 dark:text-slate-900 rounded-lg hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Speichern
             </button>
