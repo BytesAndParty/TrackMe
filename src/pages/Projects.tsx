@@ -17,6 +17,7 @@ export default function Projects() {
   const [subName, setSubName] = useState('')
   const [subKey, setSubKey] = useState('')
   const [activeProjectId, setActiveProjectId] = useState<number | null>(null)
+  const [copiedId, setCopiedId] = useState<number | null>(null)
 
   async function addProject(e: React.FormEvent) {
     e.preventDefault()
@@ -70,6 +71,22 @@ export default function Projects() {
 
   async function deleteSubProject(id: number) {
     await db.subProjects.delete(id)
+  }
+
+  async function shareProject(p: Project) {
+    const subs = subProjects.filter(s => s.projectId === p.id)
+    const payload = {
+      key: p.key,
+      name: p.name,
+      color: p.color,
+      linkTemplate: p.linkTemplate,
+      subProjects: subs.map(s => ({ key: s.key, name: s.name })),
+    }
+    const base64 = btoa(JSON.stringify(payload))
+    const url = `${window.location.origin}/import?data=${base64}`
+    await navigator.clipboard.writeText(url)
+    setCopiedId(p.id!)
+    setTimeout(() => setCopiedId(null), 2000)
   }
 
   return (
@@ -171,6 +188,12 @@ export default function Projects() {
                       className="text-xs px-2 py-1 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded transition-colors"
                     >
                       {isExpanded ? 'Zuklappen' : 'Aufklappen'}
+                    </button>
+                    <button
+                      onClick={() => shareProject(p)}
+                      className="text-xs px-2 py-1 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded transition-colors"
+                    >
+                      {copiedId === p.id ? 'Kopiert!' : 'Teilen'}
                     </button>
                     <button
                       onClick={() => startEdit(p)}

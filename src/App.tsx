@@ -8,6 +8,7 @@ const MonthView = lazy(() => import('./pages/MonthView'))
 const Reports = lazy(() => import('./pages/Reports'))
 const Items = lazy(() => import('./pages/Items'))
 const Projects = lazy(() => import('./pages/Projects'))
+const Import = lazy(() => import('./pages/Import'))
 const ItemDetailOverlay = lazy(() => import('./components/kanban/ItemDetailOverlay'))
 
 function Loading() {
@@ -31,6 +32,7 @@ export default function App() {
             <Route path=":id" element={<Suspense fallback={<Loading />}><ItemDetailOverlay /></Suspense>} />
           </Route>
           <Route path="/projects" element={<Suspense fallback={<Loading />}><Projects /></Suspense>} />
+          <Route path="/import" element={<Suspense fallback={<Loading />}><Import /></Suspense>} />
         </Route>
       </Routes>
     </BrowserRouter>
