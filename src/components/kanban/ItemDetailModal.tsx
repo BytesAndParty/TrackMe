@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { db, type Item, type ItemStatus, type Project } from '../../db'
+import MarkdownView from '../MarkdownView'
 
 interface ItemDetailModalProps {
   item?: Item
@@ -26,6 +27,8 @@ export default function ItemDetailModal({
   const [url, setUrl] = useState(item?.url ?? '')
   const [notes, setNotes] = useState(item?.notes ?? '')
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [infoCollapsed, setInfoCollapsed] = useState(() => localStorage.getItem('itemDetailInfoCollapsed') === 'true')
+  const [notesPreview, setNotesPreview] = useState(false)
 
   useEffect(() => {
     function handleEsc(e: KeyboardEvent) {
@@ -34,6 +37,14 @@ export default function ItemDetailModal({
     document.addEventListener('keydown', handleEsc)
     return () => document.removeEventListener('keydown', handleEsc)
   }, [onClose])
+
+  function toggleInfoCollapsed() {
+    setInfoCollapsed(prev => {
+      const next = !prev
+      localStorage.setItem('itemDetailInfoCollapsed', String(next))
+      return next
+    })
+  }
 
   async function handleSave() {
     if (!projectId || !title.trim()) return
@@ -108,100 +119,158 @@ export default function ItemDetailModal({
           </button>
         </div>
 
-        <div className="px-6 py-4 space-y-4">
-          {/* Projekt */}
+        <div className="px-6 py-4 space-y-6">
+          {/* Collapsible Project Info */}
           <div>
-            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Projekt *</label>
-            <select
-              value={projectId}
-              onChange={(e) => setProjectId(e.target.value ? Number(e.target.value) : '')}
-              className={inputClass}
+            <button
+              type="button"
+              onClick={toggleInfoCollapsed}
+              className="flex items-center gap-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 transition-colors mb-3"
             >
-              <option value="">Projekt wählen...</option>
-              {projects
-                .filter((p) => p.active)
-                .map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.key} – {p.name}
-                  </option>
-                ))}
-            </select>
-          </div>
-
-          {/* Item Nr + Status */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Item Nr</label>
-              <input
-                type="text"
-                value={itemNr}
-                onChange={(e) => setItemNr(e.target.value)}
-                placeholder="z.B. 1234"
-                className={`${inputClass} font-mono`}
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Status</label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value as ItemStatus)}
-                className={inputClass}
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className={`transition-transform ${infoCollapsed ? '-rotate-90' : ''}`}
               >
-                {(Object.entries(statusLabels) as [ItemStatus, string][]).map(([key, label]) => (
-                  <option key={key} value={key}>
-                    {label}
-                  </option>
-                ))}
-              </select>
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+              Projekt-Infos
+            </button>
+
+            {!infoCollapsed && (
+              <div className="space-y-4">
+                {/* Projekt */}
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Projekt *</label>
+                  <select
+                    value={projectId}
+                    onChange={(e) => setProjectId(e.target.value ? Number(e.target.value) : '')}
+                    className={inputClass}
+                  >
+                    <option value="">Projekt wählen...</option>
+                    {projects
+                      .filter((p) => p.active)
+                      .map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.key} – {p.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
+                {/* Item Nr + Status */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Item Nr</label>
+                    <input
+                      type="text"
+                      value={itemNr}
+                      onChange={(e) => setItemNr(e.target.value)}
+                      placeholder="z.B. 1234"
+                      className={`${inputClass} font-mono`}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Status</label>
+                    <select
+                      value={status}
+                      onChange={(e) => setStatus(e.target.value as ItemStatus)}
+                      className={inputClass}
+                    >
+                      {(Object.entries(statusLabels) as [ItemStatus, string][]).map(([key, label]) => (
+                        <option key={key} value={key}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Titel */}
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Titel *</label>
+                  <input
+                    type="text"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="Kurzbeschreibung des Items"
+                    className={inputClass}
+                  />
+                </div>
+
+                {/* Beschreibung */}
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Beschreibung</label>
+                  <textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    rows={3}
+                    placeholder="Details zum Item..."
+                    className={`${inputClass} resize-none`}
+                  />
+                </div>
+
+                {/* URL */}
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">URL</label>
+                  <input
+                    type="url"
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
+                    placeholder="https://dev.azure.com/..."
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Notizen — always visible */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-medium text-slate-500 dark:text-slate-400">Persönliche Notizen</label>
+              <button
+                type="button"
+                onClick={() => setNotesPreview(!notesPreview)}
+                className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                title={notesPreview ? 'Bearbeiten' : 'Vorschau'}
+              >
+                {notesPreview ? (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                    <path d="m15 5 4 4" />
+                  </svg>
+                ) : (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                )}
+              </button>
             </div>
-          </div>
-
-          {/* Titel */}
-          <div>
-            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Titel *</label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Kurzbeschreibung des Items"
-              className={inputClass}
-            />
-          </div>
-
-          {/* Beschreibung */}
-          <div>
-            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Beschreibung</label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-              placeholder="Details zum Item..."
-              className={`${inputClass} resize-none`}
-            />
-          </div>
-
-          {/* URL */}
-          <div>
-            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">URL</label>
-            <input
-              type="url"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://dev.azure.com/..."
-              className={inputClass}
-            />
-          </div>
-
-          {/* Notizen */}
-          <div>
-            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Persönliche Notizen</label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={10}
-              placeholder="Eigene Notizen zu diesem Item..."
-              className={`${inputClass} resize-none`}
-            />
+            {notesPreview ? (
+              <div className="min-h-[240px] border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 bg-white dark:bg-slate-800">
+                {notes.trim() ? (
+                  <MarkdownView content={notes} />
+                ) : (
+                  <p className="text-sm text-slate-400 dark:text-slate-500 italic">Keine Notizen vorhanden.</p>
+                )}
+              </div>
+            ) : (
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={16}
+                placeholder="Eigene Notizen zu diesem Item... (Markdown wird unterstützt)"
+                className={`${inputClass} resize-none`}
+              />
+            )}
           </div>
         </div>
 
