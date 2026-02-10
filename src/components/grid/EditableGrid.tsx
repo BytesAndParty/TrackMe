@@ -227,7 +227,7 @@ export default function EditableGrid({ date, entries, projects, subProjects, ite
             const hasConflict = conflictRows.has(rowIndex)
             return (
               <tr
-                key={row._id ?? `new-${rowIndex}`}
+                key={row._key}
                 className={`group border-b transition-colors ${
                   hasConflict
                     ? 'border-red-200 dark:border-red-900/50 bg-red-50/50 dark:bg-red-900/10'

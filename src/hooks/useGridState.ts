@@ -4,6 +4,7 @@ import { calculateDuration } from '../lib/parser'
 
 export interface GridRowData {
   _id?: number
+  _key: string
   _dirty: boolean
   _isNew: boolean
   startTime: string
@@ -14,8 +15,14 @@ export interface GridRowData {
   taskText: string
 }
 
+let _rowKeyCounter = 0
+function nextRowKey(): string {
+  return `row-${++_rowKeyCounter}`
+}
+
 function createEmptyRow(): GridRowData {
   return {
+    _key: nextRowKey(),
     _dirty: false,
     _isNew: true,
     startTime: '',
@@ -27,9 +34,10 @@ function createEmptyRow(): GridRowData {
   }
 }
 
-function entryToRow(entry: TimeEntry, projects: Project[], subProjects: SubProject[]): GridRowData {
+function entryToRow(entry: TimeEntry, projects: Project[], subProjects: SubProject[], existingKey?: string): GridRowData {
   return {
     _id: entry.id,
+    _key: existingKey ?? nextRowKey(),
     _dirty: false,
     _isNew: false,
     startTime: entry.startTime,
@@ -59,12 +67,12 @@ export function useGridState(
 
     setRows((prev) => {
       const newRows: GridRowData[] = dbEntries.map((entry) => {
-        const existingIdx = prev.findIndex((r) => r._id === entry.id)
+        const existing = prev.find((r) => r._id === entry.id)
         // Keep local state if row is being edited
-        if (existingIdx >= 0 && editingRows.current.has(existingIdx)) {
-          return prev[existingIdx]
+        if (existing && editingRows.current.has(prev.indexOf(existing))) {
+          return existing
         }
-        return entryToRow(entry, projects, subProjects)
+        return entryToRow(entry, projects, subProjects, existing?._key)
       })
 
       // Preserve any dirty new rows (without _id) that are being edited
