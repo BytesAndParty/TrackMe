@@ -106,7 +106,64 @@ export default function Reports() {
   const toDate = new Date(dateTo + 'T00:00:00')
   const diffDays = Math.round((toDate.getTime() - fromDate.getTime()) / 86400000)
 
-  let chartData: { label: string; minutes: number }[]
+  const fallbackColors = isDark ? COLORS_DARK : COLORS
+
+  // Build chart segments: one per sub-project (or project if no sub-projects)
+  type ChartSegment = { key: string; label: string; color: string }
+  const chartSegments: ChartSegment[] = []
+  const projectIds = [...new Set(entries.filter(e => e.projectId).map(e => e.projectId!))]
+
+  projectIds.sort((a, b) => {
+    const aMin = entries.filter(e => e.projectId === a).reduce((s, e) => s + e.durationMinutes, 0)
+    const bMin = entries.filter(e => e.projectId === b).reduce((s, e) => s + e.durationMinutes, 0)
+    return bMin - aMin
+  })
+
+  for (const projId of projectIds) {
+    const proj = projects.find(p => p.id === projId)
+    const baseColor = proj?.color ?? fallbackColors[chartSegments.length % fallbackColors.length]
+    const projEntries = entries.filter(e => e.projectId === projId)
+    const subIds = [...new Set(projEntries.filter(e => e.subProjectId).map(e => e.subProjectId!))]
+    const hasNoSub = projEntries.some(e => !e.subProjectId)
+
+    if (subIds.length === 0) {
+      chartSegments.push({ key: `proj-${projId}`, label: proj?.key ?? '?', color: baseColor })
+    } else {
+      if (hasNoSub) {
+        chartSegments.push({ key: `proj-${projId}`, label: proj?.key ?? '?', color: baseColor })
+      }
+      subIds.sort((a, b) => {
+        const aMin = projEntries.filter(e => e.subProjectId === a).reduce((s, e) => s + e.durationMinutes, 0)
+        const bMin = projEntries.filter(e => e.subProjectId === b).reduce((s, e) => s + e.durationMinutes, 0)
+        return bMin - aMin
+      })
+      subIds.forEach((subId, i) => {
+        const sub = subProjects.find(s => s.id === subId)
+        const offset = hasNoSub ? i + 1 : i
+        chartSegments.push({
+          key: `sub-${subId}`,
+          label: `${proj?.key ?? '?'} / ${sub?.key ?? '?'}`,
+          color: offset === 0 ? baseColor : lightenColor(baseColor, offset * 0.15),
+        })
+      })
+    }
+  }
+
+  if (entries.some(e => !e.projectId)) {
+    chartSegments.push({
+      key: 'no-project',
+      label: 'Ohne Projekt',
+      color: fallbackColors[chartSegments.length % fallbackColors.length],
+    })
+  }
+
+  function matchSegment(e: { projectId?: number; subProjectId?: number }, segKey: string): boolean {
+    if (segKey === 'no-project') return !e.projectId
+    if (segKey.startsWith('sub-')) return e.subProjectId === Number(segKey.slice(4))
+    return e.projectId === Number(segKey.slice(5)) && !e.subProjectId
+  }
+
+  let chartData: Record<string, string | number>[]
   let chartTitle: string
 
   if (diffDays <= 14) {
@@ -115,27 +172,30 @@ export default function Reports() {
     const d = new Date(fromDate)
     while (d <= toDate) {
       const iso = toLocalISO(d)
-      const mins = entries
-        .filter(e => e.date === iso)
-        .reduce((sum, e) => sum + e.durationMinutes, 0)
-      chartData.push({ label: formatDateShort(iso), minutes: mins })
+      const dayEntries = entries.filter(e => e.date === iso)
+      const point: Record<string, string | number> = { label: formatDateShort(iso) }
+      for (const seg of chartSegments) {
+        point[seg.key] = dayEntries.filter(e => matchSegment(e, seg.key)).reduce((sum, e) => sum + e.durationMinutes, 0)
+      }
+      chartData.push(point)
       d.setDate(d.getDate() + 1)
     }
   } else {
     chartTitle = 'Stunden pro Woche'
     chartData = []
     const d = new Date(fromDate)
-    // Align to Monday
     const dayOfWeek = d.getDay()
     const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
     d.setDate(d.getDate() + mondayOffset)
 
     while (d <= toDate) {
       const weekDates = getWeekDates(d)
-      const mins = entries
-        .filter(e => e.date >= weekDates[0] && e.date <= weekDates[6])
-        .reduce((sum, e) => sum + e.durationMinutes, 0)
-      chartData.push({ label: `KW${getISOWeek(d)}`, minutes: mins })
+      const weekEntries = entries.filter(e => e.date >= weekDates[0] && e.date <= weekDates[6])
+      const point: Record<string, string | number> = { label: `KW${getISOWeek(d)}` }
+      for (const seg of chartSegments) {
+        point[seg.key] = weekEntries.filter(e => matchSegment(e, seg.key)).reduce((sum, e) => sum + e.durationMinutes, 0)
+      }
+      chartData.push(point)
       d.setDate(d.getDate() + 7)
     }
   }
@@ -147,7 +207,6 @@ export default function Reports() {
       projectMinutes.set(e.projectId, (projectMinutes.get(e.projectId) ?? 0) + e.durationMinutes)
     }
   }
-  const fallbackColors = isDark ? COLORS_DARK : COLORS
   const pieData = Array.from(projectMinutes.entries())
     .map(([id, mins], i) => {
       const proj = projects.find((p) => p.id === id)
@@ -258,7 +317,7 @@ export default function Reports() {
           {/* Bar Chart */}
           <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
             <h2 className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-4">{chartTitle}</h2>
-            <ResponsiveContainer width="100%" height={260}>
+            <ResponsiveContainer width="100%" height={chartSegments.length > 3 ? 300 : 260}>
               <BarChart data={chartData}>
                 <XAxis dataKey="label" tick={{ fontSize: 11, fill: chartTextColor }} tickLine={false} axisLine={false} />
                 <YAxis
@@ -268,12 +327,25 @@ export default function Reports() {
                   tickFormatter={(v: number) => `${Math.round(v / 60)}h`}
                 />
                 <Tooltip
-                  formatter={(value: number | undefined) => [formatDuration(value ?? 0), 'Dauer']}
+                  formatter={(value: number | undefined, name?: string) => {
+                    const seg = chartSegments.find(s => s.key === name)
+                    return [formatDuration(value ?? 0), seg?.label ?? name ?? '']
+                  }}
                   contentStyle={tooltipStyle}
                   labelStyle={tooltipLabelStyle}
                   itemStyle={tooltipItemStyle}
                 />
-                <Bar dataKey="minutes" fill={isDark ? '#60a5fa' : '#0f172a'} radius={[4, 4, 0, 0]} />
+                {chartSegments.length > 1 && (
+                  <Legend
+                    formatter={(value: string) => {
+                      const seg = chartSegments.find(s => s.key === value)
+                      return <span className="text-xs text-slate-600 dark:text-slate-400">{seg?.label ?? value}</span>
+                    }}
+                  />
+                )}
+                {chartSegments.map(seg => (
+                  <Bar key={seg.key} dataKey={seg.key} name={seg.key} fill={seg.color} stackId="hours" />
+                ))}
               </BarChart>
             </ResponsiveContainer>
           </div>
