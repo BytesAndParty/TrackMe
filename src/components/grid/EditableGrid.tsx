@@ -39,6 +39,14 @@ export default function EditableGrid({ date, entries, projects, subProjects, ite
     if (el) {
       el.focus()
       el.select()
+    } else {
+      requestAnimationFrame(() => {
+        const el = cellRefs.current.get(key)
+        if (el) {
+          el.focus()
+          el.select()
+        }
+      })
     }
   }
 
@@ -199,7 +207,7 @@ export default function EditableGrid({ date, entries, projects, subProjects, ite
   }
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-x-auto">
+    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-x-clip overflow-y-visible">
       <table className="w-full">
         <thead>
           <tr className="border-b border-slate-100 dark:border-slate-700">

@@ -8,12 +8,6 @@ export default function Projects() {
 
   const [name, setName] = useState('')
   const [key, setKey] = useState('')
-  const [editingId, setEditingId] = useState<number | null>(null)
-  const [editName, setEditName] = useState('')
-  const [editKey, setEditKey] = useState('')
-  const [editLinkTemplate, setEditLinkTemplate] = useState('')
-  const [editColor, setEditColor] = useState('')
-
   const [subName, setSubName] = useState('')
   const [subKey, setSubKey] = useState('')
   const [activeProjectId, setActiveProjectId] = useState<number | null>(null)
@@ -27,17 +21,8 @@ export default function Projects() {
     setKey('')
   }
 
-  async function startEdit(p: Project) {
-    setEditingId(p.id!)
-    setEditName(p.name)
-    setEditKey(p.key)
-    setEditLinkTemplate(p.linkTemplate ?? '')
-    setEditColor(p.color ?? '')
-  }
-
-  async function saveEdit(id: number) {
-    await db.projects.update(id, { name: editName.trim(), key: editKey.trim().toLowerCase(), color: editColor || undefined, linkTemplate: editLinkTemplate.trim() || undefined })
-    setEditingId(null)
+  async function saveField(id: number, field: string, value: string) {
+    await db.projects.update(id, { [field]: value.trim() || undefined })
   }
 
   async function saveLinkTemplate(id: number, template: string) {
@@ -139,87 +124,76 @@ export default function Projects() {
                 p.active ? 'border-slate-200 dark:border-slate-700' : 'border-slate-100 dark:border-slate-800 opacity-60'
               }`}
             >
-              <div className="flex items-center gap-3 px-4 py-3">
-                {editingId === p.id ? (
-                  <>
-                    <input
-                      value={editKey}
-                      onChange={(e) => setEditKey(e.target.value)}
-                      className="w-24 px-2 py-1 border border-slate-200 dark:border-slate-700 rounded text-sm font-mono bg-white dark:bg-slate-800"
-                      onKeyDown={(e) => e.key === 'Enter' && saveEdit(p.id!)}
-                    />
-                    <input
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                      className="flex-1 px-2 py-1 border border-slate-200 dark:border-slate-700 rounded text-sm bg-white dark:bg-slate-800"
-                      onKeyDown={(e) => e.key === 'Enter' && saveEdit(p.id!)}
-                    />
-                    <input
-                      value={editLinkTemplate}
-                      onChange={(e) => setEditLinkTemplate(e.target.value)}
-                      placeholder="Link-Template: https://.../{itemNr}"
-                      className="w-72 px-2 py-1 border border-slate-200 dark:border-slate-700 rounded bg-white dark:bg-slate-800 font-mono text-xs"
-                    />
-                    <button
-                      onClick={() => saveEdit(p.id!)}
-                      className="text-xs px-3 py-1 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-md hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors"
-                    >
-                      Speichern
-                    </button>
-                    <button
-                      onClick={() => setEditingId(null)}
-                      className="text-xs px-3 py-1 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
-                    >
-                      Abbrechen
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    {p.color && (
-                      <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
-                    )}
-                    <span className="font-mono text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded">
-                      {p.key}
-                    </span>
-                    <span className="font-medium text-sm flex-1">{p.name}</span>
-                    <span className="text-xs text-slate-400 dark:text-slate-500">{subs.length} Unterprojekte</span>
-                    <button
-                      onClick={() => setActiveProjectId(isExpanded ? null : p.id!)}
-                      className="text-xs px-2 py-1 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded transition-colors"
-                    >
-                      {isExpanded ? 'Zuklappen' : 'Aufklappen'}
-                    </button>
-                    <button
-                      onClick={() => shareProject(p)}
-                      className="text-xs px-2 py-1 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded transition-colors"
-                    >
-                      {copiedId === p.id ? 'Kopiert!' : 'Teilen'}
-                    </button>
-                    <button
-                      onClick={() => startEdit(p)}
-                      className="text-xs px-2 py-1 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded transition-colors"
-                    >
-                      Bearbeiten
-                    </button>
-                    <button
-                      onClick={() => toggleActive(p)}
-                      className="text-xs px-2 py-1 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded transition-colors"
-                    >
-                      {p.active ? 'Deaktivieren' : 'Aktivieren'}
-                    </button>
-                    <button
-                      onClick={() => deleteProject(p.id!)}
-                      className="text-xs px-2 py-1 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
-                    >
-                      Löschen
-                    </button>
-                  </>
+              <div
+                className="flex items-center gap-3 px-4 py-3 cursor-pointer select-none"
+                onClick={() => setActiveProjectId(isExpanded ? null : p.id!)}
+              >
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className={`text-slate-400 transition-transform shrink-0 ${isExpanded ? 'rotate-90' : ''}`}
+                >
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+                {p.color && (
+                  <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
                 )}
+                <span className="font-mono text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded">
+                  {p.key}
+                </span>
+                <span className="font-medium text-sm flex-1">{p.name}</span>
+                <span className="text-xs text-slate-400 dark:text-slate-500">{subs.length} Unterprojekte</span>
+                <button
+                  onClick={(e) => { e.stopPropagation(); shareProject(p) }}
+                  className="text-xs px-2 py-1 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded transition-colors"
+                >
+                  {copiedId === p.id ? 'Kopiert!' : 'Teilen'}
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); toggleActive(p) }}
+                  className="text-xs px-2 py-1 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded transition-colors"
+                >
+                  {p.active ? 'Deaktivieren' : 'Aktivieren'}
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); deleteProject(p.id!) }}
+                  className="text-xs px-2 py-1 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                >
+                  Löschen
+                </button>
               </div>
 
               {/* Sub Projects */}
               {isExpanded && (
                 <div className="border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 px-4 py-3 space-y-3">
+                  {/* Project Key & Name */}
+                  <div className="flex gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Kürzel</label>
+                      <input
+                        type="text"
+                        defaultValue={p.key}
+                        onBlur={(e) => saveField(p.id!, 'key', e.target.value.toLowerCase())}
+                        className="w-28 px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md text-xs font-mono focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-100 focus:border-transparent"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Name</label>
+                      <input
+                        type="text"
+                        defaultValue={p.name}
+                        onBlur={(e) => saveField(p.id!, 'name', e.target.value)}
+                        className="w-full px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-100 focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+
                   {/* Project Color */}
                   <div>
                     <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Projektfarbe</label>

@@ -1,4 +1,4 @@
-import { Fragment, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, lightenColor } from '../db'
@@ -81,6 +81,8 @@ export default function Reports() {
 
   const [preset, setPreset] = useState<RangePreset>(() => {
     if (searchParams.get('from') && searchParams.get('to')) return 'custom'
+    const saved = localStorage.getItem('reportPreset') as RangePreset | null
+    if (saved && PRESET_LABELS.some(([k]) => k === saved)) return saved
     return 'last_month'
   })
 
@@ -161,6 +163,7 @@ export default function Reports() {
 
   function selectPreset(p: RangePreset) {
     setPreset(p)
+    localStorage.setItem('reportPreset', p)
     if (p !== 'custom') {
       const { from, to } = computeRange(p)
       setSearchParams({ from, to }, { replace: true })
@@ -175,10 +178,31 @@ export default function Reports() {
     setSearchParams({ from, to }, { replace: true })
   }
 
+  // Tab / Shift+Tab to cycle presets (only when no input is focused)
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key !== 'Tab') return
+      const tag = (e.target as HTMLElement)?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+      e.preventDefault()
+      const keys = PRESET_LABELS.map(([k]) => k)
+      const idx = keys.indexOf(preset)
+      if (e.shiftKey) {
+        selectPreset(keys[(idx - 1 + keys.length) % keys.length])
+      } else {
+        selectPreset(keys[(idx + 1) % keys.length])
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [preset])
+
   const chartTextColor = isDark ? '#94a3b8' : undefined
   const tooltipStyle = isDark
     ? { borderRadius: 8, border: '1px solid #334155', fontSize: 12, backgroundColor: '#1e293b', color: '#e2e8f0' }
-    : { borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 12 }
+    : { borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 12, backgroundColor: '#ffffff', color: '#0f172a' }
+  const tooltipLabelStyle = isDark ? { color: '#e2e8f0' } : { color: '#0f172a' }
+  const tooltipItemStyle = isDark ? { color: '#cbd5e1' } : { color: '#334155' }
 
   return (
     <div className="space-y-8">
@@ -246,6 +270,8 @@ export default function Reports() {
                 <Tooltip
                   formatter={(value: number | undefined) => [formatDuration(value ?? 0), 'Dauer']}
                   contentStyle={tooltipStyle}
+                  labelStyle={tooltipLabelStyle}
+                  itemStyle={tooltipItemStyle}
                 />
                 <Bar dataKey="minutes" fill={isDark ? '#60a5fa' : '#0f172a'} radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -273,6 +299,8 @@ export default function Reports() {
                 <Tooltip
                   formatter={(value: number | undefined) => [formatDuration(value ?? 0), 'Dauer']}
                   contentStyle={tooltipStyle}
+                  labelStyle={tooltipLabelStyle}
+                  itemStyle={tooltipItemStyle}
                 />
                 <Legend
                   formatter={(value: string) => <span className="text-xs text-slate-600 dark:text-slate-400">{value}</span>}
