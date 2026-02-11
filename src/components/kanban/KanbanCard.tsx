@@ -9,6 +9,10 @@ interface KanbanCardProps {
 }
 
 export default function KanbanCard({ item, project, onClick, timeMinutes }: KanbanCardProps) {
+  const estimatedMinutes = item.estimatedMinutes ?? 0
+  const hasEstimate = estimatedMinutes > 0
+  const remainingMinutes = estimatedMinutes - timeMinutes
+
   return (
     <div
       draggable
@@ -39,6 +43,15 @@ export default function KanbanCard({ item, project, onClick, timeMinutes }: Kanb
         )}
       </div>
       <p className="text-sm font-medium leading-snug">{item.title}</p>
+      {hasEstimate && (
+        <p className={`text-[11px] mt-1 ${remainingMinutes >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+          {remainingMinutes >= 0
+            ? `${formatDuration(remainingMinutes)} übrig`
+            : `${formatDuration(Math.abs(remainingMinutes))} drüber`}
+          {' · '}
+          geplant {formatDuration(estimatedMinutes)}
+        </p>
+      )}
       {item.notes && (
         <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5 line-clamp-2">{item.notes}</p>
       )}
