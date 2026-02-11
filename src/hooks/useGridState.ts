@@ -62,6 +62,48 @@ function rowContentEqual(a: GridRowData, b: GridRowData): boolean {
   )
 }
 
+function normalizeKey(value: string): string {
+  return value.trim().toLowerCase()
+}
+
+function rowMatchesEntry(
+  row: GridRowData,
+  entry: TimeEntry,
+  projects: Project[],
+  subProjects: SubProject[]
+): boolean {
+  const rowProject = projects.find((p) => normalizeKey(p.key) === normalizeKey(row.project))
+  const rowSubProject = rowProject
+    ? subProjects.find(
+        (s) => s.projectId === rowProject.id && normalizeKey(s.key) === normalizeKey(row.subProject)
+      )
+    : undefined
+
+  return (
+    row.startTime === entry.startTime &&
+    row.endTime === entry.endTime &&
+    (rowProject?.id ?? undefined) === (entry.projectId ?? undefined) &&
+    (rowSubProject?.id ?? undefined) === (entry.subProjectId ?? undefined) &&
+    row.itemNr.trim() === (entry.itemNr ?? '').trim() &&
+    row.taskText.trim() === (entry.taskText ?? '').trim()
+  )
+}
+
+function dedupeRowsById(rows: GridRowData[]): GridRowData[] {
+  const seen = new Set<number>()
+  const deduped: GridRowData[] = []
+
+  for (const row of rows) {
+    if (row._id !== undefined) {
+      if (seen.has(row._id)) continue
+      seen.add(row._id)
+    }
+    deduped.push(row)
+  }
+
+  return deduped
+}
+
 export function useGridState(
   date: string,
   dbEntries: TimeEntry[],
@@ -93,26 +135,43 @@ export function useGridState(
     lastSyncRef.current = syncKey
 
     const prev = rowsRef.current
+    const matchedUnsavedKeys = new Set<string>()
     const newRows: GridRowData[] = dbEntries.map((entry) => {
       const existing = prev.find((r) => r._id === entry.id)
       // Keep local state if row is being edited
       if (existing && editingRows.current.has(existing._key)) {
         return existing
       }
-      return entryToRow(entry, projects, subProjects, existing?._key)
+
+      if (existing) {
+        return entryToRow(entry, projects, subProjects, existing._key)
+      }
+
+      const matchingUnsaved = prev.find(
+        (r) =>
+          !r._id &&
+          !matchedUnsavedKeys.has(r._key) &&
+          rowMatchesEntry(r, entry, projects, subProjects)
+      )
+      if (matchingUnsaved) {
+        matchedUnsavedKeys.add(matchingUnsaved._key)
+        return { ...matchingUnsaved, _id: entry.id, _isNew: false }
+      }
+
+      return entryToRow(entry, projects, subProjects)
     })
 
     // Preserve any dirty new rows (without _id)
     const dirtyNewRows = prev.filter((r) => !r._id && r._dirty && !newRows.some((n) => n._key === r._key))
-    newRows.push(...dirtyNewRows)
+    const mergedRows = dedupeRowsById([...newRows, ...dirtyNewRows])
 
     // Ensure there's always an empty row at the end
-    const hasEmpty = newRows.some((r) => r._isNew && !r._dirty)
+    const hasEmpty = mergedRows.some((r) => r._isNew && !r._dirty)
     if (!hasEmpty) {
-      newRows.push(createEmptyRow())
+      mergedRows.push(createEmptyRow())
     }
 
-    setRowsImmediate(newRows)
+    setRowsImmediate(mergedRows)
   }, [dbEntries, projects, subProjects])
 
   function markEditing(rowKey: string) {
@@ -223,13 +282,14 @@ export function useGridState(
       const current = prev[idx]
       const contentUnchanged = rowContentEqual(current, row)
       const updated = [...prev]
+      const resolvedId = current._id ?? insertedId
       updated[idx] = {
         ...current,
-        _id: current._id ?? insertedId,
+        _id: resolvedId,
         _dirty: contentUnchanged ? false : current._dirty,
         _isNew: false,
       }
-      return updated
+      return dedupeRowsById(updated)
     })
   }
 
