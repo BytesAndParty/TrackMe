@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, lightenColor } from '../db'
@@ -97,7 +97,8 @@ export default function Reports() {
   const entries = allEntries.filter(e => e.date >= dateFrom && e.date <= dateTo)
   const projects = useLiveQuery(() => db.projects.toArray()) ?? []
   const subProjects = useLiveQuery(() => db.subProjects.toArray()) ?? []
-  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set())
+  const items = useLiveQuery(() => db.items.toArray()) ?? []
+  const [transferDate, setTransferDate] = useState(dateTo)
 
   const isDark = document.documentElement.classList.contains('dark')
 
@@ -219,6 +220,94 @@ export default function Reports() {
     .sort((a, b) => b.value - a.value)
 
   const totalMinutes = entries.reduce((sum, e) => sum + e.durationMinutes, 0)
+  const transferEntries = allEntries
+    .filter((e) => e.date === transferDate)
+    .sort((a, b) => a.startTime.localeCompare(b.startTime))
+
+  const itemTitleByProjectAndNr = new Map<string, string>()
+  for (const item of items) {
+    itemTitleByProjectAndNr.set(`${item.projectId}-${item.itemNr}`, item.title.trim())
+  }
+
+  type TransferGroup = {
+    key: string
+    label: string
+    minutes: number
+    itemsText: string
+    hoursDecimal: string
+  }
+
+  const transferGroupMap = new Map<string, { label: string; entries: typeof transferEntries; minutes: number }>()
+  for (const entry of transferEntries) {
+    const project = projects.find((p) => p.id === entry.projectId)
+    const subProject = subProjects.find((s) => s.id === entry.subProjectId)
+
+    let key = 'no-project'
+    let label = 'Ohne Projekt'
+
+    if (subProject) {
+      key = `sub-${subProject.id}`
+      label = `${project?.key ?? '?'} / ${subProject.key}`
+    } else if (project) {
+      key = `proj-${project.id}`
+      label = project.key
+    }
+
+    const group = transferGroupMap.get(key)
+    if (group) {
+      group.entries.push(entry)
+      group.minutes += entry.durationMinutes
+    } else {
+      transferGroupMap.set(key, {
+        label,
+        entries: [entry],
+        minutes: entry.durationMinutes,
+      })
+    }
+  }
+
+  function formatHoursDecimal(minutes: number): string {
+    return (minutes / 60).toFixed(2).replace('.', ',')
+  }
+
+  const transferGroups: TransferGroup[] = Array.from(transferGroupMap.entries())
+    .map(([key, group]) => {
+      const byItem = new Map<string, { label: string; texts: Set<string> }>()
+      for (const entry of group.entries) {
+        const itemNr = entry.itemNr.trim()
+        const itemKey = itemNr || '__none__'
+        const itemTitle = entry.projectId
+          ? itemTitleByProjectAndNr.get(`${entry.projectId}-${itemNr}`)
+          : undefined
+        const itemLabel = itemNr
+          ? itemTitle
+            ? `#${itemNr} ${itemTitle}`
+            : `#${itemNr}`
+          : 'Ohne Item'
+
+        if (!byItem.has(itemKey)) {
+          byItem.set(itemKey, { label: itemLabel, texts: new Set() })
+        }
+
+        const description = entry.taskText.trim() || entry.notes.trim()
+        if (description) byItem.get(itemKey)!.texts.add(description)
+      }
+
+      const itemLines = Array.from(byItem.values()).map((item) => {
+        const descriptions = Array.from(item.texts)
+        if (descriptions.length === 0) return item.label
+        return `${item.label}: ${descriptions.join(' | ')}`
+      })
+
+      return {
+        key,
+        label: group.label,
+        minutes: group.minutes,
+        itemsText: itemLines.join('\n'),
+        hoursDecimal: formatHoursDecimal(group.minutes),
+      }
+    })
+    .sort((a, b) => b.minutes - a.minutes)
 
   function selectPreset(p: RangePreset) {
     setPreset(p)
@@ -381,142 +470,68 @@ export default function Reports() {
             </ResponsiveContainer>
           </div>
 
-          {/* Project Table */}
+          {/* Daily Transfer View */}
           <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm lg:col-span-2">
-            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700">
-              <h2 className="text-sm font-medium text-slate-500 dark:text-slate-400">Projekt-Übersicht</h2>
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-medium text-slate-500 dark:text-slate-400">Tages-Transfer nach Unterprojekt</h2>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                  Gruppierung nach Unterprojekt, ohne Unterprojekt nach Projekt.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={transferDate}
+                  onChange={(e) => setTransferDate(e.target.value)}
+                  className="border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5 text-sm bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 dark:focus:ring-slate-100/10"
+                />
+              </div>
             </div>
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-slate-50 dark:border-slate-800">
-                  <th className="text-left text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider px-6 py-3">Projekt</th>
-                  <th className="text-right text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider px-6 py-3">Einträge</th>
-                  <th className="text-right text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider px-6 py-3">Stunden</th>
-                  <th className="text-right text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider px-6 py-3">Anteil</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
-                {pieData.map((row) => {
-                  const project = projects.find((p) => p.key === row.name)
-                  const projectEntries = entries.filter(
-                    (e) => e.projectId === project?.id
-                  )
-                  const pct = totalMinutes > 0 ? Math.round((row.value / totalMinutes) * 100) : 0
-                  const isExpanded = expandedProjects.has(row.name)
-                  const projectSubs = subProjects.filter((s) => s.projectId === project?.id)
-                  const hasSubData = projectSubs.length > 0
-
-                  // Build sub-project breakdown
-                  const subMinutes = new Map<number, number>()
-                  let noSubMinutes = 0
-                  if (isExpanded) {
-                    for (const e of projectEntries) {
-                      if (e.subProjectId) {
-                        subMinutes.set(e.subProjectId, (subMinutes.get(e.subProjectId) ?? 0) + e.durationMinutes)
-                      } else {
-                        noSubMinutes += e.durationMinutes
-                      }
-                    }
-                  }
-
-                  return (
-                    <Fragment key={row.name}>
-                      <tr
-                        className={`hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors ${hasSubData ? 'cursor-pointer' : ''}`}
-                        onClick={() => {
-                          if (!hasSubData) return
-                          setExpandedProjects((prev) => {
-                            const next = new Set(prev)
-                            if (next.has(row.name)) next.delete(row.name)
-                            else next.add(row.name)
-                            return next
-                          })
-                        }}
-                      >
-                        <td className="px-6 py-3">
-                          <div className="flex items-center gap-2">
-                            {hasSubData && (
-                              <svg
-                                width="12"
-                                height="12"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                className={`text-slate-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
-                              >
-                                <polyline points="9 18 15 12 9 6" />
-                              </svg>
-                            )}
-                            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: row.color }} />
-                            <span className="font-mono text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded">{row.name}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-3 text-right text-sm tabular-nums text-slate-600 dark:text-slate-400">{projectEntries.length}</td>
-                        <td className="px-6 py-3 text-right text-sm tabular-nums font-medium">{formatDuration(row.value)}</td>
-                        <td className="px-6 py-3 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <div className="w-16 h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                              <div
-                                className="h-full rounded-full"
-                                style={{ width: `${pct}%`, backgroundColor: row.color }}
-                              />
-                            </div>
-                            <span className="text-xs tabular-nums text-slate-500 dark:text-slate-400 w-8 text-right">{pct}%</span>
-                          </div>
-                        </td>
-                      </tr>
-                      {isExpanded && (
-                        <>
-                          {projectSubs
-                            .filter((s) => subMinutes.has(s.id!))
-                            .sort((a, b) => (subMinutes.get(b.id!) ?? 0) - (subMinutes.get(a.id!) ?? 0))
-                            .map((sub) => {
-                              const mins = subMinutes.get(sub.id!) ?? 0
-                              const subEntries = projectEntries.filter((e) => e.subProjectId === sub.id)
-                              const subPct = row.value > 0 ? Math.round((mins / row.value) * 100) : 0
-                              return (
-                                <tr key={`sub-${sub.id}`} className="bg-slate-50/50 dark:bg-slate-800/30">
-                                  <td className="px-6 py-2 pl-14">
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: lightenColor(row.color, 0.3) }} />
-                                      <span className="font-mono text-xs text-slate-500 dark:text-slate-400">{sub.key}</span>
-                                      <span className="text-xs text-slate-400 dark:text-slate-500">{sub.name}</span>
-                                    </div>
-                                  </td>
-                                  <td className="px-6 py-2 text-right text-xs tabular-nums text-slate-500 dark:text-slate-400">{subEntries.length}</td>
-                                  <td className="px-6 py-2 text-right text-xs tabular-nums text-slate-600 dark:text-slate-300">{formatDuration(mins)}</td>
-                                  <td className="px-6 py-2 text-right">
-                                    <span className="text-xs tabular-nums text-slate-400 dark:text-slate-500">{subPct}%</span>
-                                  </td>
-                                </tr>
-                              )
-                            })}
-                          {noSubMinutes > 0 && (
-                            <tr className="bg-slate-50/50 dark:bg-slate-800/30">
-                              <td className="px-6 py-2 pl-14">
-                                <span className="text-xs text-slate-400 dark:text-slate-500 italic">Ohne Unterprojekt</span>
-                              </td>
-                              <td className="px-6 py-2 text-right text-xs tabular-nums text-slate-500 dark:text-slate-400">
-                                {projectEntries.filter((e) => !e.subProjectId).length}
-                              </td>
-                              <td className="px-6 py-2 text-right text-xs tabular-nums text-slate-600 dark:text-slate-300">{formatDuration(noSubMinutes)}</td>
-                              <td className="px-6 py-2 text-right">
-                                <span className="text-xs tabular-nums text-slate-400 dark:text-slate-500">
-                                  {row.value > 0 ? Math.round((noSubMinutes / row.value) * 100) : 0}%
-                                </span>
-                              </td>
-                            </tr>
-                          )}
-                        </>
-                      )}
-                    </Fragment>
-                  )
-                })}
-              </tbody>
-            </table>
+            <div className="p-6 space-y-4">
+              {transferGroups.length === 0 ? (
+                <p className="text-sm text-slate-400 dark:text-slate-500">Keine Einträge am ausgewählten Tag.</p>
+              ) : (
+                transferGroups.map((group) => (
+                  <div
+                    key={group.key}
+                    className="rounded-lg border border-slate-200 dark:border-slate-700 p-4 space-y-3 bg-slate-50/40 dark:bg-slate-800/20"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="font-mono text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-1 rounded">
+                        {group.label}
+                      </span>
+                      <span className="text-xs text-slate-500 dark:text-slate-400">
+                        {formatDuration(group.minutes)}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-[1fr_180px] gap-3">
+                      <div>
+                        <label className="block text-[11px] uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
+                          Items + Beschreibung
+                        </label>
+                        <textarea
+                          readOnly
+                          value={group.itemsText || 'Ohne Item/Beschreibung'}
+                          rows={Math.max(3, group.itemsText.split('\n').length)}
+                          className="w-full border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 resize-y"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
+                          Stunden gesamt (dezimal)
+                        </label>
+                        <input
+                          readOnly
+                          value={group.hoursDecimal}
+                          className="w-full border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 font-mono tabular-nums"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
       )}
