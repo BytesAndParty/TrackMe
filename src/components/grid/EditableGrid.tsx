@@ -18,7 +18,7 @@ interface EditableGridProps {
 }
 
 export default function EditableGrid({ date, entries, projects, subProjects, items, onItemClick }: EditableGridProps) {
-  const { rows, updateCell, commitRow, deleteRow, markEditing, unmarkEditing } = useGridState(
+  const { rows, updateCell, commitRow, deleteRow, markEditing, unmarkEditing, isEditing } = useGridState(
     date,
     entries,
     projects,
@@ -50,7 +50,7 @@ export default function EditableGrid({ date, entries, projects, subProjects, ite
     }
   }
 
-  function handleCellKeyDown(e: React.KeyboardEvent, rowIndex: number, colIndex: number) {
+  function handleCellKeyDown(e: React.KeyboardEvent, rowIndex: number, colIndex: number, rowKey: string) {
     switch (e.key) {
       case 'Tab':
         e.preventDefault()
@@ -64,7 +64,7 @@ export default function EditableGrid({ date, entries, projects, subProjects, ite
           if (colIndex < COLUMN_COUNT - 1) {
             focusCell(rowIndex, colIndex + 1)
           } else {
-            commitRow(rowIndex)
+            void commitRow(rowKey)
             focusCell(rowIndex + 1, 0)
           }
         }
@@ -72,7 +72,7 @@ export default function EditableGrid({ date, entries, projects, subProjects, ite
 
       case 'Enter':
         e.preventDefault()
-        commitRow(rowIndex)
+        void commitRow(rowKey)
         focusCell(rowIndex + 1, colIndex)
         break
 
@@ -97,17 +97,19 @@ export default function EditableGrid({ date, entries, projects, subProjects, ite
       case 'Delete':
         if (e.ctrlKey || e.metaKey) {
           e.preventDefault()
-          deleteRow(rowIndex)
+          void deleteRow(rowKey)
         }
         break
     }
   }
 
-  function handleRowBlur(rowIndex: number) {
-    unmarkEditing(rowIndex)
+  function handleRowBlur(rowKey: string) {
+    unmarkEditing(rowKey)
     // Delay commit to allow focus to move to another cell in the same row
     setTimeout(() => {
-      commitRow(rowIndex)
+      if (!isEditing(rowKey)) {
+        void commitRow(rowKey)
+      }
     }, 100)
   }
 
@@ -125,7 +127,7 @@ export default function EditableGrid({ date, entries, projects, subProjects, ite
       return sum + (d > 0 ? d : 0)
     }, 0)
 
-  // Conflict detection: find rows with overlapping time ranges
+  // Non-blocking overlap detection: show hints only, never auto-adjust or block saving
   const conflictRows = new Set<number>()
   const validRows = rows
     .map((r, i) => ({ index: i, start: r.startTime, end: r.endTime }))
@@ -142,6 +144,7 @@ export default function EditableGrid({ date, entries, projects, subProjects, ite
       }
     }
   }
+  const overlapHintCount = conflictRows.size
 
   const projectSuggestions = projects
     .filter((p) => p.active)
@@ -208,6 +211,12 @@ export default function EditableGrid({ date, entries, projects, subProjects, ite
 
   return (
     <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-x-clip overflow-y-visible">
+      {overlapHintCount > 0 && (
+        <div className="px-2 py-2 text-xs text-amber-700 dark:text-amber-300 bg-amber-50/70 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-900/40">
+          Hinweis: {overlapHintCount} {overlapHintCount === 1 ? 'Eintrag überschneidet sich zeitlich' : 'Einträge überschneiden sich zeitlich'}.
+          Es wird nichts automatisch angepasst.
+        </div>
+      )}
       <table className="w-full">
         <thead>
           <tr className="border-b border-slate-100 dark:border-slate-700">
@@ -226,24 +235,24 @@ export default function EditableGrid({ date, entries, projects, subProjects, ite
             const isEmptyNew = row._isNew && !row._dirty
             const hasConflict = conflictRows.has(rowIndex)
             return (
-              <tr
-                key={row._key}
-                className={`group border-b transition-colors ${
-                  hasConflict
-                    ? 'border-red-200 dark:border-red-900/50 bg-red-50/50 dark:bg-red-900/10'
-                    : 'border-slate-50 dark:border-slate-800'
-                } ${isEmptyNew ? 'opacity-50' : ''}`}
-                title={hasConflict ? 'Zeitüberschneidung mit anderem Eintrag' : undefined}
-              >
+                <tr
+                  key={row._key}
+                  className={`group border-b transition-colors ${
+                    hasConflict
+                      ? 'border-amber-200 dark:border-amber-900/40 bg-amber-50/40 dark:bg-amber-900/10'
+                      : 'border-slate-50 dark:border-slate-800'
+                  } ${isEmptyNew ? 'opacity-50' : ''}`}
+                  title={hasConflict ? 'Hinweis: Zeitüberschneidung mit anderem Eintrag' : undefined}
+                >
                 {/* Start */}
                 <td className="grid-cell">
                   <TimeCell
                     value={row.startTime}
-                    onChange={(v) => updateCell(rowIndex, 'startTime', v)}
-                    onKeyDown={(e) => handleCellKeyDown(e, rowIndex, 0)}
+                    onChange={(v) => updateCell(row._key, 'startTime', v)}
+                    onKeyDown={(e) => handleCellKeyDown(e, rowIndex, 0, row._key)}
                     inputRef={(el) => setCellRef(rowIndex, 0, el)}
-                    onFocus={() => markEditing(rowIndex)}
-                    onBlur={() => handleRowBlur(rowIndex)}
+                    onFocus={() => markEditing(row._key)}
+                    onBlur={() => handleRowBlur(row._key)}
                   />
                 </td>
 
@@ -251,11 +260,11 @@ export default function EditableGrid({ date, entries, projects, subProjects, ite
                 <td className="grid-cell">
                   <TimeCell
                     value={row.endTime}
-                    onChange={(v) => updateCell(rowIndex, 'endTime', v)}
-                    onKeyDown={(e) => handleCellKeyDown(e, rowIndex, 1)}
+                    onChange={(v) => updateCell(row._key, 'endTime', v)}
+                    onKeyDown={(e) => handleCellKeyDown(e, rowIndex, 1, row._key)}
                     inputRef={(el) => setCellRef(rowIndex, 1, el)}
-                    onFocus={() => markEditing(rowIndex)}
-                    onBlur={() => handleRowBlur(rowIndex)}
+                    onFocus={() => markEditing(row._key)}
+                    onBlur={() => handleRowBlur(row._key)}
                   />
                 </td>
 
@@ -265,7 +274,7 @@ export default function EditableGrid({ date, entries, projects, subProjects, ite
                     value={row.project}
                     suggestions={projectSuggestions}
                     onChange={(v) => {
-                      updateCell(rowIndex, 'project', v)
+                      updateCell(row._key, 'project', v)
                       // Clear subproject if project changes
                       const currentProject = projects.find(
                         (p) => p.key.toLowerCase() === v.toLowerCase()
@@ -276,13 +285,13 @@ export default function EditableGrid({ date, entries, projects, subProjects, ite
                           s.key.toLowerCase() === row.subProject.toLowerCase()
                       )
                       if (!currentSub && row.subProject) {
-                        updateCell(rowIndex, 'subProject', '')
+                        updateCell(row._key, 'subProject', '')
                       }
                     }}
-                    onKeyDown={(e) => handleCellKeyDown(e, rowIndex, 2)}
+                    onKeyDown={(e) => handleCellKeyDown(e, rowIndex, 2, row._key)}
                     inputRef={(el) => setCellRef(rowIndex, 2, el)}
-                    onFocus={() => markEditing(rowIndex)}
-                    onBlur={() => handleRowBlur(rowIndex)}
+                    onFocus={() => markEditing(row._key)}
+                    onBlur={() => handleRowBlur(row._key)}
                   />
                 </td>
 
@@ -291,11 +300,11 @@ export default function EditableGrid({ date, entries, projects, subProjects, ite
                   <AutocompleteCell
                     value={row.subProject}
                     suggestions={getSubProjectSuggestions(row.project)}
-                    onChange={(v) => updateCell(rowIndex, 'subProject', v)}
-                    onKeyDown={(e) => handleCellKeyDown(e, rowIndex, 3)}
+                    onChange={(v) => updateCell(row._key, 'subProject', v)}
+                    onKeyDown={(e) => handleCellKeyDown(e, rowIndex, 3, row._key)}
                     inputRef={(el) => setCellRef(rowIndex, 3, el)}
-                    onFocus={() => markEditing(rowIndex)}
-                    onBlur={() => handleRowBlur(rowIndex)}
+                    onFocus={() => markEditing(row._key)}
+                    onBlur={() => handleRowBlur(row._key)}
                   />
                 </td>
 
@@ -306,11 +315,11 @@ export default function EditableGrid({ date, entries, projects, subProjects, ite
                       <AutocompleteCell
                         value={row.itemNr}
                         suggestions={getItemSuggestions(row.project, row.subProject)}
-                        onChange={(v) => updateCell(rowIndex, 'itemNr', v)}
-                        onKeyDown={(e) => handleCellKeyDown(e, rowIndex, 4)}
+                        onChange={(v) => updateCell(row._key, 'itemNr', v)}
+                        onKeyDown={(e) => handleCellKeyDown(e, rowIndex, 4, row._key)}
                         inputRef={(el) => setCellRef(rowIndex, 4, el)}
-                        onFocus={() => markEditing(rowIndex)}
-                        onBlur={() => handleRowBlur(rowIndex)}
+                        onFocus={() => markEditing(row._key)}
+                        onBlur={() => handleRowBlur(row._key)}
                       />
                     </div>
                     {(() => {
@@ -360,22 +369,25 @@ export default function EditableGrid({ date, entries, projects, subProjects, ite
                 <td className="grid-cell">
                   <TextCell
                     value={row.taskText}
-                    onChange={(v) => updateCell(rowIndex, 'taskText', v)}
-                    onKeyDown={(e) => handleCellKeyDown(e, rowIndex, 5)}
+                    onChange={(v) => updateCell(row._key, 'taskText', v)}
+                    onKeyDown={(e) => handleCellKeyDown(e, rowIndex, 5, row._key)}
                     inputRef={(el) => setCellRef(rowIndex, 5, el)}
-                    onFocus={() => markEditing(rowIndex)}
-                    onBlur={() => handleRowBlur(rowIndex)}
+                    onFocus={() => markEditing(row._key)}
+                    onBlur={() => handleRowBlur(row._key)}
                     placeholder="Beschreibung..."
                   />
                 </td>
 
                 {/* Duration (read-only) */}
                 <td className="px-3 py-2 text-right">
-                  <span className={`text-sm tabular-nums ${
-                    hasConflict ? 'text-red-500 dark:text-red-400 font-medium' : 'text-slate-500 dark:text-slate-400'
-                  }`}>
+                  <span className={`text-sm tabular-nums ${hasConflict ? 'text-amber-700 dark:text-amber-300 font-medium' : 'text-slate-500 dark:text-slate-400'}`}>
                     {computeDuration(row)}
                   </span>
+                  {hasConflict && (
+                    <div className="text-[10px] leading-3 mt-0.5 text-amber-700 dark:text-amber-300">
+                      Hinweis
+                    </div>
+                  )}
                 </td>
 
                 {/* Delete */}
@@ -383,7 +395,7 @@ export default function EditableGrid({ date, entries, projects, subProjects, ite
                   {row._id && (
                     <button
                       type="button"
-                      onClick={() => deleteRow(rowIndex)}
+                      onClick={() => void deleteRow(row._key)}
                       className="opacity-0 group-hover:opacity-100 p-1 text-slate-300 dark:text-slate-600 hover:text-red-500 transition-all rounded"
                       tabIndex={-1}
                     >

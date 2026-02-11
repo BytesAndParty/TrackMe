@@ -28,41 +28,40 @@ export default function TimeCell({
     setInvalid(false)
   }
 
-  function handleBlur() {
-    if (rawInput !== null) {
-      if (rawInput.trim() === '') {
-        onChange('')
-        setInvalid(false)
-      } else {
-        const parsed = parseTimeInput(rawInput)
-        if (parsed) {
-          onChange(parsed)
-          setInvalid(false)
-        } else {
-          setInvalid(true)
-        }
-      }
+  function commitRawInput(): boolean {
+    if (rawInput === null) return true
+
+    if (rawInput.trim() === '') {
+      onChange('')
+      setInvalid(false)
       setRawInput(null)
+      return true
     }
+
+    const parsed = parseTimeInput(rawInput)
+    if (parsed) {
+      onChange(parsed)
+      setInvalid(false)
+      setRawInput(null)
+      return true
+    }
+
+    setInvalid(true)
+    return false
+  }
+
+  function handleBlur() {
+    commitRawInput()
     onBlur()
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
     // On Tab/Enter, format before navigation
     if (e.key === 'Tab' || e.key === 'Enter') {
-      if (rawInput !== null) {
-        if (rawInput.trim() === '') {
-          onChange('')
-        } else {
-          const parsed = parseTimeInput(rawInput)
-          if (parsed) {
-            onChange(parsed)
-            setInvalid(false)
-          } else {
-            setInvalid(true)
-          }
-        }
-        setRawInput(null)
+      const ok = commitRawInput()
+      if (!ok) {
+        e.preventDefault()
+        return
       }
     }
     onKeyDown(e)
@@ -77,7 +76,6 @@ export default function TimeCell({
       onKeyDown={handleKeyDown}
       onFocus={(e) => {
         e.target.select()
-        setRawInput(null)
         setInvalid(false)
         onFocus()
       }}
