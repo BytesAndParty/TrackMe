@@ -46,6 +46,7 @@ export interface Item {
   itemNr: string
   title: string
   description: string
+  estimatedMinutes?: number // original estimate in minutes
   status: ItemStatus
   url: string
   notes: string
