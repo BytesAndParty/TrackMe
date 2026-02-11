@@ -10,6 +10,20 @@ interface ItemDetailModalProps {
   onClose: () => void
 }
 
+function minutesToHoursInput(minutes?: number): string {
+  if (!minutes || minutes <= 0) return ''
+  const hours = minutes / 60
+  return Number.isInteger(hours) ? String(hours) : hours.toFixed(2).replace(/\.?0+$/, '')
+}
+
+function parseEstimatedMinutes(rawHours: string): number | undefined {
+  const normalized = rawHours.trim().replace(',', '.')
+  if (!normalized) return undefined
+  const hours = Number(normalized)
+  if (!Number.isFinite(hours) || hours <= 0) return undefined
+  return Math.round(hours * 60)
+}
+
 export default function ItemDetailModal({
   item,
   defaultStatus,
@@ -24,6 +38,7 @@ export default function ItemDetailModal({
   const [title, setTitle] = useState(item?.title ?? '')
   const [description, setDescription] = useState(item?.description ?? '')
   const [status, setStatus] = useState<ItemStatus>(item?.status ?? defaultStatus ?? 'todo')
+  const [estimatedHours, setEstimatedHours] = useState(minutesToHoursInput(item?.estimatedMinutes))
   const [url, setUrl] = useState(item?.url ?? '')
   const [notes, setNotes] = useState(item?.notes ?? '')
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -50,6 +65,7 @@ export default function ItemDetailModal({
     if (!projectId || !title.trim()) return
 
     const now = new Date().toISOString()
+    const estimatedMinutes = parseEstimatedMinutes(estimatedHours)
 
     if (isEdit && item?.id) {
       await db.items.update(item.id, {
@@ -58,6 +74,7 @@ export default function ItemDetailModal({
         title: title.trim(),
         description,
         status,
+        estimatedMinutes,
         url: url.trim(),
         notes,
         updatedAt: now,
@@ -72,6 +89,7 @@ export default function ItemDetailModal({
         title: title.trim(),
         description,
         status,
+        estimatedMinutes,
         url: url.trim(),
         notes,
         sortOrder: maxSort + 1000,
@@ -190,6 +208,20 @@ export default function ItemDetailModal({
                       ))}
                     </select>
                   </div>
+                </div>
+
+                {/* Aufwandsschaetzung */}
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Schätzung (Stunden)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.25"
+                    value={estimatedHours}
+                    onChange={(e) => setEstimatedHours(e.target.value)}
+                    placeholder="z.B. 8"
+                    className={inputClass}
+                  />
                 </div>
 
                 {/* Titel */}

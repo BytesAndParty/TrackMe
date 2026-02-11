@@ -11,6 +11,20 @@ const statusLabels: Record<ItemStatus, string> = {
   done: 'Erledigt',
 }
 
+function minutesToHoursInput(minutes?: number): string {
+  if (!minutes || minutes <= 0) return ''
+  const hours = minutes / 60
+  return Number.isInteger(hours) ? String(hours) : hours.toFixed(2).replace(/\.?0+$/, '')
+}
+
+function parseEstimatedMinutes(rawHours: string): number | undefined {
+  const normalized = rawHours.trim().replace(',', '.')
+  if (!normalized) return undefined
+  const hours = Number(normalized)
+  if (!Number.isFinite(hours) || hours <= 0) return undefined
+  return Math.round(hours * 60)
+}
+
 export default function ItemDetailOverlay() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -42,6 +56,7 @@ export default function ItemDetailOverlay() {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [status, setStatus] = useState<ItemStatus>('todo')
+  const [estimatedHours, setEstimatedHours] = useState('')
   const [url, setUrl] = useState('')
   const [notes, setNotes] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -55,31 +70,34 @@ export default function ItemDetailOverlay() {
       setTitle(item.title)
       setDescription(item.description)
       setStatus(item.status)
+      setEstimatedHours(minutesToHoursInput(item.estimatedMinutes))
       setUrl(item.url)
       setNotes(item.notes)
     }
   }, [item])
 
-  useEffect(() => {
-    function handleEsc(e: KeyboardEvent) {
-      if (e.key === 'Escape') close()
-    }
-    document.addEventListener('keydown', handleEsc)
-    return () => document.removeEventListener('keydown', handleEsc)
-  }, [])
-
   function close() {
     navigate('/items')
   }
 
+  useEffect(() => {
+    function handleEsc(e: KeyboardEvent) {
+      if (e.key === 'Escape') navigate('/items')
+    }
+    document.addEventListener('keydown', handleEsc)
+    return () => document.removeEventListener('keydown', handleEsc)
+  }, [navigate])
+
   async function handleSave() {
     if (!item?.id || !projectId || !title.trim()) return
+    const estimatedMinutes = parseEstimatedMinutes(estimatedHours)
     await db.items.update(item.id, {
       projectId: Number(projectId),
       itemNr: itemNr.trim(),
       title: title.trim(),
       description,
       status,
+      estimatedMinutes,
       url: url.trim(),
       notes,
       updatedAt: new Date().toISOString(),
@@ -103,6 +121,10 @@ export default function ItemDetailOverlay() {
   }
 
   if (!item) return null
+
+  const estimatedMinutes = item.estimatedMinutes ?? 0
+  const hasEstimate = estimatedMinutes > 0
+  const remainingMinutes = estimatedMinutes - totalMinutes
 
   const inputClass = "w-full border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 dark:focus:ring-slate-100/10"
 
@@ -197,6 +219,20 @@ export default function ItemDetailOverlay() {
                   </div>
                 </div>
 
+                {/* Aufwandsschaetzung */}
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Schätzung (Stunden)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.25"
+                    value={estimatedHours}
+                    onChange={(e) => setEstimatedHours(e.target.value)}
+                    placeholder="z.B. 8"
+                    className={inputClass}
+                  />
+                </div>
+
                 {/* Titel */}
                 <div>
                   <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Titel *</label>
@@ -283,6 +319,14 @@ export default function ItemDetailOverlay() {
             <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-3">
               Zeiteinträge ({timeEntries.length}) &middot; {formatDuration(totalMinutes)} gesamt
             </h3>
+            {hasEstimate && (
+              <p className={`text-xs mb-3 ${remainingMinutes >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                Schätzung {formatDuration(estimatedMinutes)} &middot; Erfasst {formatDuration(totalMinutes)} &middot;{' '}
+                {remainingMinutes >= 0
+                  ? `${formatDuration(remainingMinutes)} übrig`
+                  : `${formatDuration(Math.abs(remainingMinutes))} drüber`}
+              </p>
+            )}
             {timeEntries.length > 0 ? (
               <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
                 <table className="w-full">
