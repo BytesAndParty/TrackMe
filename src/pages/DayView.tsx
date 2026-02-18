@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useSearchParams, useNavigate, useLocation } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db'
 import { todayISO, toLocalISO, formatDateLong, formatDuration } from '../lib/parser'
@@ -8,6 +8,7 @@ import EditableGrid from '../components/grid/EditableGrid'
 export default function DayView() {
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const [selectedDate, setSelectedDate] = useState(() => {
     const dateParam = searchParams.get('date')
     if (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) return dateParam
@@ -87,7 +88,11 @@ export default function DayView() {
         projects={projects}
         subProjects={subProjects}
         items={items}
-        onItemClick={(item) => navigate(`/items/${item.id}`)}
+        onItemClick={(item) =>
+          navigate(`/items/${item.id}`, {
+            state: { returnTo: `${location.pathname}${location.search}` },
+          })
+        }
       />
 
       {/* Keyboard hint */}

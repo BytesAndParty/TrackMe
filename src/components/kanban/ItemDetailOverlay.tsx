@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, type ItemStatus } from '../../db'
 import { formatDuration, formatDateShort } from '../../lib/parser'
@@ -28,7 +28,11 @@ function parseEstimatedMinutes(rawHours: string): number | undefined {
 export default function ItemDetailOverlay() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
   const numericId = Number(id)
+  const returnTo = typeof location.state === 'object' && location.state !== null && 'returnTo' in location.state
+    ? location.state.returnTo
+    : undefined
 
   const item = useLiveQuery(
     () => (numericId ? db.items.get(numericId) : undefined),
@@ -77,16 +81,16 @@ export default function ItemDetailOverlay() {
   }, [item])
 
   function close() {
-    navigate('/items')
+    navigate(typeof returnTo === 'string' ? returnTo : '/items')
   }
 
   useEffect(() => {
     function handleEsc(e: KeyboardEvent) {
-      if (e.key === 'Escape') navigate('/items')
+      if (e.key === 'Escape') close()
     }
     document.addEventListener('keydown', handleEsc)
     return () => document.removeEventListener('keydown', handleEsc)
-  }, [navigate])
+  }, [close])
 
   async function handleSave() {
     if (!item?.id || !projectId || !title.trim()) return
