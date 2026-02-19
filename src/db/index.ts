@@ -55,12 +55,22 @@ export interface Item {
   updatedAt: string
 }
 
+export interface TodoTask {
+  id?: number
+  text: string
+  linkedItemId?: number
+  sortOrder: number
+  createdAt: string
+  updatedAt: string
+}
+
 const db = new Dexie('TrackMeDB') as Dexie & {
   projects: EntityTable<Project, 'id'>
   subProjects: EntityTable<SubProject, 'id'>
   workItemLinks: EntityTable<WorkItemLink, 'id'>
   timeEntries: EntityTable<TimeEntry, 'id'>
   items: EntityTable<Item, 'id'>
+  todoTasks: EntityTable<TodoTask, 'id'>
 }
 
 db.version(1).stores({
@@ -95,6 +105,15 @@ db.version(4).stores({
   workItemLinks: '++id, itemId, projectId, subProjectId',
   timeEntries: '++id, date, projectId, subProjectId, workItemLinkId, itemNr',
   items: '++id, projectId, itemNr, status, sortOrder',
+})
+
+db.version(5).stores({
+  projects: '++id, key, name, active',
+  subProjects: '++id, projectId, key, name',
+  workItemLinks: '++id, itemId, projectId, subProjectId',
+  timeEntries: '++id, date, projectId, subProjectId, workItemLinkId, itemNr',
+  items: '++id, projectId, itemNr, status, sortOrder',
+  todoTasks: '++id, sortOrder, linkedItemId, createdAt',
 })
 
 export const PROJECT_COLORS = [
