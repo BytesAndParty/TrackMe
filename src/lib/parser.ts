@@ -45,7 +45,7 @@ export function parseQuickEntry(input: string): ParsedEntry {
   }
 
   // Remove known tokens to find project/subproject keys
-  let remaining = input
+  const remaining = input
     .replace(TIME_PATTERN, '')
     .replace(WORK_ITEM_PATTERN, '')
     .replace(QUOTED_TEXT_PATTERN, '')
