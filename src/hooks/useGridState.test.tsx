@@ -125,4 +125,27 @@ describe('useGridState', () => {
       expect(rowsWithId).toHaveLength(1)
     })
   })
+
+  it('resets save status after debounce when no row can be persisted yet', async () => {
+    vi.useFakeTimers()
+    try {
+      const { result } = renderHook(() => useGridState('2026-02-11', [], [], []))
+      const rowKey = result.current.rows[0]._key
+
+      act(() => {
+        result.current.updateCell(rowKey, 'taskText', 'draft')
+      })
+
+      await act(async () => {
+        vi.advanceTimersByTime(2000)
+        await Promise.resolve()
+      })
+
+      expect(result.current.saveStatus).toBe('saved')
+      expect(mocks.timeEntriesAdd).not.toHaveBeenCalled()
+    } finally {
+      vi.runOnlyPendingTimers()
+      vi.useRealTimers()
+    }
+  })
 })

@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { type TimeEntry, type Project, type SubProject, type Item } from '../../db'
 import { useGridState, type GridRowData } from '../../hooks/useGridState'
 import { calculateDuration, formatDuration } from '../../lib/parser'
@@ -15,10 +15,19 @@ interface EditableGridProps {
   subProjects: SubProject[]
   items: Item[]
   onItemClick?: (item: Item) => void
+  onCommitAllDirtyReady?: (commitAllDirty: () => Promise<boolean>) => void
 }
 
-export default function EditableGrid({ date, entries, projects, subProjects, items, onItemClick }: EditableGridProps) {
-  const { rows, updateCell, commitRow, deleteRow, markEditing, unmarkEditing, isEditing } = useGridState(
+export default function EditableGrid({
+  date,
+  entries,
+  projects,
+  subProjects,
+  items,
+  onItemClick,
+  onCommitAllDirtyReady,
+}: EditableGridProps) {
+  const { rows, updateCell, commitRow, commitAllDirty, deleteRow, markEditing, unmarkEditing, saveStatus } = useGridState(
     date,
     entries,
     projects,
@@ -26,6 +35,10 @@ export default function EditableGrid({ date, entries, projects, subProjects, ite
   )
 
   const cellRefs = useRef<Map<string, HTMLInputElement>>(new Map())
+
+  useEffect(() => {
+    onCommitAllDirtyReady?.(commitAllDirty)
+  }, [onCommitAllDirtyReady, commitAllDirty])
 
   function setCellRef(row: number, col: number, el: HTMLInputElement | null) {
     const key = `${row}-${col}`
@@ -53,17 +66,20 @@ export default function EditableGrid({ date, entries, projects, subProjects, ite
   function handleCellKeyDown(e: React.KeyboardEvent, rowIndex: number, colIndex: number, rowKey: string) {
     switch (e.key) {
       case 'Tab':
-        e.preventDefault()
         if (e.shiftKey) {
           if (colIndex > 0) {
+            e.preventDefault()
             focusCell(rowIndex, colIndex - 1)
           } else if (rowIndex > 0) {
+            e.preventDefault()
             focusCell(rowIndex - 1, COLUMN_COUNT - 1)
           }
         } else {
           if (colIndex < COLUMN_COUNT - 1) {
+            e.preventDefault()
             focusCell(rowIndex, colIndex + 1)
           } else {
+            e.preventDefault()
             void commitRow(rowKey)
             focusCell(rowIndex + 1, 0)
           }
@@ -105,12 +121,8 @@ export default function EditableGrid({ date, entries, projects, subProjects, ite
 
   function handleRowBlur(rowKey: string) {
     unmarkEditing(rowKey)
-    // Delay commit to allow focus to move to another cell in the same row
-    setTimeout(() => {
-      if (!isEditing(rowKey)) {
-        void commitRow(rowKey)
-      }
-    }, 100)
+    // Removed immediate commitRow here. 
+    // The debounced save in useGridState will handle it.
   }
 
   function computeDuration(row: GridRowData): string {
@@ -411,8 +423,36 @@ export default function EditableGrid({ date, entries, projects, subProjects, ite
         </tbody>
         <tfoot>
           <tr className="border-t border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
-            <td colSpan={6} className="px-2 py-2.5 text-xs font-medium text-slate-500 dark:text-slate-400">
-              Gesamt
+            <td colSpan={6} className="px-2 py-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Gesamt</span>
+                
+                {/* Save Status Indicator */}
+                <div className="flex items-center gap-2 mr-4">
+                  {saveStatus === 'saving' && (
+                    <div className="flex items-center gap-1.5 text-[10px] text-blue-600 dark:text-blue-400 font-medium">
+                      <div className="w-1.5 h-1.5 border border-blue-600 dark:border-blue-400 border-t-transparent rounded-full animate-spin" />
+                      Speichern...
+                    </div>
+                  )}
+                  {saveStatus === 'saved' && (
+                    <div className="flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                      Alle Änderungen gespeichert
+                    </div>
+                  )}
+                  {saveStatus === 'error' && (
+                    <div className="flex items-center gap-1 text-[10px] text-red-600 dark:text-red-400 font-medium">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+                      </svg>
+                      Fehler beim Speichern
+                    </div>
+                  )}
+                </div>
+              </div>
             </td>
             <td className="px-3 py-2.5 text-right">
               <span className="text-sm tabular-nums font-bold">

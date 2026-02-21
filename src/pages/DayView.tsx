@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useSearchParams, useNavigate, useLocation } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db'
@@ -9,6 +9,8 @@ export default function DayView() {
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
   const location = useLocation()
+  const commitAllDirtyRef = useRef<null | (() => Promise<boolean>)>(null)
+  const [isNavigatingDate, setIsNavigatingDate] = useState(false)
   const [selectedDate, setSelectedDate] = useState(() => {
     const dateParam = searchParams.get('date')
     if (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) return dateParam
@@ -36,10 +38,27 @@ export default function DayView() {
     }
   }, [selectedDate])
 
-  function navigateDay(offset: number) {
+  const registerCommitAllDirty = useCallback((commitAllDirty: () => Promise<boolean>) => {
+    commitAllDirtyRef.current = commitAllDirty
+  }, [])
+
+  async function changeDate(nextDate: string) {
+    if (nextDate === selectedDate || isNavigatingDate) return
+
+    setIsNavigatingDate(true)
+    try {
+      const saved = commitAllDirtyRef.current ? await commitAllDirtyRef.current() : true
+      if (!saved) return
+      setSelectedDate(nextDate)
+    } finally {
+      setIsNavigatingDate(false)
+    }
+  }
+
+  async function navigateDay(offset: number) {
     const d = new Date(selectedDate + 'T12:00:00')
     d.setDate(d.getDate() + offset)
-    setSelectedDate(toLocalISO(d))
+    await changeDate(toLocalISO(d))
   }
 
   return (
@@ -48,7 +67,9 @@ export default function DayView() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => navigateDay(-1)}
+            onClick={() => void navigateDay(-1)}
+            aria-label="Vorheriger Tag"
+            disabled={isNavigatingDate}
             className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -63,7 +84,9 @@ export default function DayView() {
             </p>
           </div>
           <button
-            onClick={() => navigateDay(1)}
+            onClick={() => void navigateDay(1)}
+            aria-label="Nächster Tag"
+            disabled={isNavigatingDate}
             className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -73,7 +96,9 @@ export default function DayView() {
         </div>
         {selectedDate !== todayISO() && (
           <button
-            onClick={() => setSelectedDate(todayISO())}
+            onClick={() => void changeDate(todayISO())}
+            aria-label="Heute"
+            disabled={isNavigatingDate}
             className="text-xs px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors font-medium"
           >
             Heute
@@ -88,6 +113,7 @@ export default function DayView() {
         projects={projects}
         subProjects={subProjects}
         items={items}
+        onCommitAllDirtyReady={registerCommitAllDirty}
         onItemClick={(item) =>
           navigate(`/items/${item.id}`, {
             state: { returnTo: `${location.pathname}${location.search}` },

@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { db, type TimeEntry, type Project, type SubProject } from '../db'
 import { calculateDuration } from '../lib/parser'
+import { useDebouncedCallback } from './useDebouncedCallback'
 
 export interface GridRowData {
   _id?: number
@@ -104,6 +105,8 @@ function dedupeRowsById(rows: GridRowData[]): GridRowData[] {
   return deduped
 }
 
+export type SaveStatus = 'saved' | 'saving' | 'error'
+
 export function useGridState(
   date: string,
   dbEntries: TimeEntry[],
@@ -112,23 +115,25 @@ export function useGridState(
 ) {
   const initialRows = [createEmptyRow()]
   const [rows, setRows] = useState<GridRowData[]>(initialRows)
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved')
+  
   const rowsRef = useRef<GridRowData[]>(initialRows)
   const editingRows = useRef(new Set<string>())
   const pendingCommits = useRef(new Map<string, Promise<void>>())
   const lastSyncRef = useRef<string>('')
 
-  function setRowsImmediate(nextRows: GridRowData[]) {
+  const setRowsImmediate = useCallback((nextRows: GridRowData[]) => {
     rowsRef.current = nextRows
     setRows(nextRows)
-  }
+  }, [])
 
-  function updateRows(mutator: (prev: GridRowData[]) => GridRowData[]): GridRowData[] {
+  const updateRows = useCallback((mutator: (prev: GridRowData[]) => GridRowData[]): GridRowData[] => {
     const nextRows = mutator(rowsRef.current)
     setRowsImmediate(nextRows)
     return nextRows
-  }
+  }, [setRowsImmediate])
 
-  // Sync from DB when entries change (but not while editing)
+  // Sync from DB when entries change (but not while editing or dirty)
   useEffect(() => {
     const syncKey = dbEntries.map((e) => `${e.id}:${e.startTime}:${e.endTime}:${e.projectId}:${e.subProjectId}:${e.itemNr}:${e.taskText}`).join('|')
     if (syncKey === lastSyncRef.current) return
@@ -138,8 +143,9 @@ export function useGridState(
     const matchedUnsavedKeys = new Set<string>()
     const newRows: GridRowData[] = dbEntries.map((entry) => {
       const existing = prev.find((r) => r._id === entry.id)
-      // Keep local state if row is being edited
-      if (existing && editingRows.current.has(existing._key)) {
+      
+      // Keep local state if row is being edited OR is dirty (waiting for save)
+      if (existing && (editingRows.current.has(existing._key) || existing._dirty)) {
         return existing
       }
 
@@ -172,45 +178,17 @@ export function useGridState(
     }
 
     setRowsImmediate(mergedRows)
-  }, [dbEntries, projects, subProjects])
+  }, [dbEntries, projects, subProjects, setRowsImmediate])
 
-  function markEditing(rowKey: string) {
+  const markEditing = (rowKey: string) => {
     editingRows.current.add(rowKey)
   }
 
-  function unmarkEditing(rowKey: string) {
+  const unmarkEditing = (rowKey: string) => {
     editingRows.current.delete(rowKey)
   }
 
-  function isEditing(rowKey: string): boolean {
-    return editingRows.current.has(rowKey)
-  }
-
-  function updateCell(rowKey: string, field: EditableField, value: string) {
-    updateRows((prev) => {
-      const rowIndex = prev.findIndex((r) => r._key === rowKey)
-      if (rowIndex < 0) return prev
-
-      const updated = [...prev]
-      const current = updated[rowIndex]
-      const row = { ...current }
-      ;(row as GridRowData)[field] = value
-      row._dirty = true
-
-      // If editing the last (empty) row, append a new empty row
-      if (row._isNew && !current._dirty) {
-        row._isNew = false
-        updated[rowIndex] = row
-        updated.push(createEmptyRow())
-      } else {
-        updated[rowIndex] = row
-      }
-
-      return updated
-    })
-  }
-
-  async function runCommitRow(rowKey: string): Promise<void> {
+  const runCommitRow = useCallback(async (rowKey: string): Promise<void> => {
     const rowIndex = rowsRef.current.findIndex((r) => r._key === rowKey)
     if (rowIndex < 0) return
     const row = rowsRef.current[rowIndex]
@@ -291,9 +269,9 @@ export function useGridState(
       }
       return dedupeRowsById(updated)
     })
-  }
+  }, [date, projects, subProjects, updateRows])
 
-  function commitRow(rowKey: string): Promise<void> {
+  const commitRow = useCallback((rowKey: string): Promise<void> => {
     const inFlight = pendingCommits.current.get(rowKey)
     if (inFlight) return inFlight
 
@@ -302,6 +280,79 @@ export function useGridState(
     })
     pendingCommits.current.set(rowKey, promise)
     return promise
+  }, [runCommitRow])
+
+  const commitAllDirty = useCallback(async (): Promise<boolean> => {
+    const dirtyRows = rowsRef.current.filter((r) => r._dirty && r.startTime)
+    if (dirtyRows.length === 0) {
+      setSaveStatus('saved')
+      return true
+    }
+
+    setSaveStatus('saving')
+    try {
+      await Promise.all(dirtyRows.map((r) => commitRow(r._key)))
+      setSaveStatus('saved')
+      return true
+    } catch (e) {
+      console.error('Failed to save entries:', e)
+      setSaveStatus('error')
+      return false
+    }
+  }, [commitRow])
+
+  const { debounced: triggerDebouncedSave, cancel: cancelDebouncedSave } = useDebouncedCallback(() => {
+    void commitAllDirty()
+  }, 2000)
+
+  // Save on unmount
+  useEffect(() => {
+    return () => {
+      cancelDebouncedSave()
+      // Trigger one last immediate save of all dirty rows
+      void commitAllDirty()
+    }
+  }, [cancelDebouncedSave, commitAllDirty])
+
+  // Handle browser close/refresh
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      const hasDirty = rowsRef.current.some(r => r._dirty && r.startTime)
+      if (hasDirty) {
+        void commitAllDirty()
+        // Standard way to show "unsaved changes" dialog
+        e.preventDefault()
+        e.returnValue = ''
+      }
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [commitAllDirty])
+
+  function updateCell(rowKey: string, field: EditableField, value: string) {
+    updateRows((prev) => {
+      const rowIndex = prev.findIndex((r) => r._key === rowKey)
+      if (rowIndex < 0) return prev
+
+      const updated = [...prev]
+      const current = updated[rowIndex]
+      const row = { ...current }
+      ;(row as GridRowData)[field] = value
+      row._dirty = true
+
+      // If editing the last (empty) row, append a new empty row
+      if (row._isNew && !current._dirty) {
+        row._isNew = false
+        updated[rowIndex] = row
+        updated.push(createEmptyRow())
+      } else {
+        updated[rowIndex] = row
+      }
+
+      return updated
+    })
+    setSaveStatus('saving') // Visual feedback that change was captured
+    triggerDebouncedSave()
   }
 
   async function deleteRow(rowKey: string) {
@@ -323,9 +374,10 @@ export function useGridState(
     rows,
     updateCell,
     commitRow,
+    commitAllDirty,
     deleteRow,
     markEditing,
     unmarkEditing,
-    isEditing,
+    saveStatus
   }
 }
