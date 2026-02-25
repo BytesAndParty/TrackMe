@@ -2,8 +2,10 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db'
 import { getWeekDates, formatDateShort, formatDuration, todayISO, toLocalISO } from '../lib/parser'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 
 export default function WeekView() {
+  const { t } = useTranslation()
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
 
@@ -90,9 +92,13 @@ export default function WeekView() {
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8l4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
           </button>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Wochenansicht</h1>
+            <h1 className="text-2xl font-bold tracking-tight">{t('weekView.title')}</h1>
             <p className="text-slate-500 dark:text-slate-400 text-sm">
-              {formatDateShort(weekDates[0])} – {formatDateShort(weekDates[6])} &middot; {formatDuration(weekTotal)} gesamt
+              {t('weekView.summary', {
+                from: formatDateShort(weekDates[0]),
+                to: formatDateShort(weekDates[6]),
+                duration: formatDuration(weekTotal),
+              })}
             </p>
           </div>
           <button
@@ -107,7 +113,7 @@ export default function WeekView() {
             onClick={resetToCurrentWeek}
             className="text-xs px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors font-medium"
           >
-            Diese Woche
+            {t('weekView.thisWeek')}
           </button>
         )}
       </div>
@@ -119,7 +125,7 @@ export default function WeekView() {
             <thead>
               <tr className="border-b border-slate-100 dark:border-slate-700">
                 <th className="text-left text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider px-4 py-3 sticky left-0 bg-white dark:bg-slate-900 min-w-35">
-                  Projekt
+                  {t('weekView.project')}
                 </th>
                 {weekDates.map((date) => (
                   <th
@@ -135,7 +141,7 @@ export default function WeekView() {
                   </th>
                 ))}
                 <th className="text-center text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider px-3 py-3 min-w-20">
-                  Summe
+                  {t('weekView.sum')}
                 </th>
               </tr>
             </thead>
@@ -143,7 +149,7 @@ export default function WeekView() {
               {rows.size === 0 ? (
                 <tr>
                   <td colSpan={9} className="text-center py-12 text-slate-400 dark:text-slate-500">
-                    <p>Keine Einträge diese Woche.</p>
+                    <p>{t('weekView.noEntries')}</p>
                   </td>
                 </tr>
               ) : (
@@ -195,7 +201,7 @@ export default function WeekView() {
             <tfoot>
               <tr className="border-t border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
                 <td className="px-4 py-3 text-xs font-medium text-slate-500 dark:text-slate-400 sticky left-0 bg-slate-50/50 dark:bg-slate-800/50">
-                  Tagesgesamt
+                  {t('weekView.dayTotal')}
                 </td>
                 {weekDates.map((date) => {
                   const total = dayTotals.get(date) ?? 0
