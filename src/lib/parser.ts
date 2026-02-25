@@ -1,3 +1,5 @@
+import i18n from '../i18n'
+
 export interface ParsedEntry {
   startTime: string | null
   endTime: string | null
@@ -160,17 +162,22 @@ export function getWeekDates(date: Date): string[] {
 
 export function formatDateShort(isoDate: string): string {
   const d = new Date(isoDate + 'T00:00:00')
-  return d.toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'numeric' })
+  return d.toLocaleDateString(getDateLocale(), { weekday: 'short', day: 'numeric', month: 'numeric' })
 }
 
 export function formatDateLong(isoDate: string): string {
   const d = new Date(isoDate + 'T00:00:00')
-  return d.toLocaleDateString('de-DE', {
+  return d.toLocaleDateString(getDateLocale(), {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
     year: 'numeric',
   })
+}
+
+function getDateLocale(): string {
+  const language = i18n.resolvedLanguage ?? i18n.language
+  return language.startsWith('en') ? 'en-US' : 'de-DE'
 }
 
 export function getISOWeek(date: Date): number {
