@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
+import { useTranslation } from 'react-i18next'
 import { db } from '../db'
 
 interface SharedProject {
@@ -12,32 +13,33 @@ interface SharedProject {
 }
 
 export default function Import() {
+  const { t } = useTranslation()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
 
   const existingProjects = useLiveQuery(() => db.projects.toArray()) ?? []
 
   const [parsed, setParsed] = useState<SharedProject | null>(null)
-  const [error, setError] = useState('')
+  const [errorKey, setErrorKey] = useState<'noDataError' | 'invalidDataError' | 'decodeError' | 'importError' | null>(null)
   const [importing, setImporting] = useState(false)
   const [duplicate, setDuplicate] = useState(false)
 
   useEffect(() => {
     const data = searchParams.get('data')
     if (!data) {
-      setError('Kein Projekt-Daten-Parameter in der URL gefunden.')
+      setErrorKey('noDataError')
       return
     }
     try {
       const json = atob(data)
       const project = JSON.parse(json) as SharedProject
       if (!project.key || !project.name) {
-        setError('Ungültige Projekt-Daten: Kürzel und Name sind erforderlich.')
+        setErrorKey('invalidDataError')
         return
       }
       setParsed(project)
     } catch {
-      setError('Die Projekt-Daten konnten nicht dekodiert werden. Der Link ist ungültig.')
+      setErrorKey('decodeError')
     }
   }, [searchParams])
 
@@ -69,23 +71,23 @@ export default function Import() {
       }
       navigate('/projects')
     } catch {
-      setError('Fehler beim Importieren des Projekts.')
+      setErrorKey('importError')
       setImporting(false)
     }
   }
 
-  if (error) {
+  if (errorKey) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold tracking-tight">Projekt importieren</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t('import.title')}</h1>
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4">
-          <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
+          <p className="text-sm text-red-700 dark:text-red-400">{t(`import.${errorKey}`)}</p>
         </div>
         <button
           onClick={() => navigate('/projects')}
           className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
         >
-          Zurück zu Projekten
+          {t('import.backToProjects')}
         </button>
       </div>
     )
@@ -101,13 +103,12 @@ export default function Import() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold tracking-tight">Projekt importieren</h1>
+      <h1 className="text-2xl font-bold tracking-tight">{t('import.title')}</h1>
 
       {duplicate && (
         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
           <p className="text-sm text-amber-700 dark:text-amber-400">
-            Ein Projekt mit dem Kürzel <span className="font-mono font-semibold">{parsed.key}</span> existiert bereits.
-            Der Import erstellt ein weiteres Projekt mit dem gleichen Kürzel.
+            {t('import.duplicateWarning', { key: parsed.key })}
           </p>
         </div>
       )}
@@ -126,7 +127,7 @@ export default function Import() {
 
           {parsed.linkTemplate && (
             <div>
-              <span className="text-xs text-slate-400 dark:text-slate-500">Link-Template:</span>
+              <span className="text-xs text-slate-400 dark:text-slate-500">{t('import.linkTemplate')}</span>
               <span className="text-xs font-mono text-slate-600 dark:text-slate-400 ml-1.5">{parsed.linkTemplate}</span>
             </div>
           )}
@@ -134,7 +135,7 @@ export default function Import() {
           {parsed.subProjects && parsed.subProjects.length > 0 && (
             <div>
               <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-1.5">
-                {parsed.subProjects.length} Unterprojekte
+                {t('import.subProjects', { count: parsed.subProjects.length })}
               </span>
               <div className="space-y-1">
                 {parsed.subProjects.map((sub, i) => (
@@ -157,13 +158,13 @@ export default function Import() {
           disabled={importing}
           className="px-4 py-2 text-sm font-medium text-white bg-slate-900 dark:bg-slate-100 dark:text-slate-900 rounded-lg hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          {importing ? 'Wird importiert...' : 'Importieren'}
+          {importing ? t('import.importing') : t('import.import')}
         </button>
         <button
           onClick={() => navigate('/projects')}
           className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
         >
-          Abbrechen
+          {t('common.cancel')}
         </button>
       </div>
     </div>
