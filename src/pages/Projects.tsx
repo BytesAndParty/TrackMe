@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
+import { useTranslation } from 'react-i18next'
 import { db, type Project, PROJECT_COLORS } from '../db'
 
 export default function Projects() {
+  const { t } = useTranslation()
   const projects = useLiveQuery(() => db.projects.toArray()) ?? []
   const subProjects = useLiveQuery(() => db.subProjects.toArray()) ?? []
 
@@ -77,22 +79,22 @@ export default function Projects() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Projekte</h1>
-        <p className="text-slate-500 dark:text-slate-400 mt-1">Verwalte deine Projekte und Unterprojekte.</p>
+        <h1 className="text-2xl font-bold tracking-tight">{t('projects.title')}</h1>
+        <p className="text-slate-500 dark:text-slate-400 mt-1">{t('projects.subtitle')}</p>
       </div>
 
       {/* Add Project Form */}
       <form onSubmit={addProject} className="flex gap-3">
         <input
           type="text"
-          placeholder="Projektkürzel (z.B. urb)"
+          placeholder={t('projects.shortcutPlaceholder')}
           value={key}
           onChange={(e) => setKey(e.target.value)}
           className="w-40 px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-100 focus:border-transparent transition-shadow"
         />
         <input
           type="text"
-          placeholder="Projektname"
+          placeholder={t('projects.namePlaceholder')}
           value={name}
           onChange={(e) => setName(e.target.value)}
           className="flex-1 px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-100 focus:border-transparent transition-shadow"
@@ -101,7 +103,7 @@ export default function Projects() {
           type="submit"
           className="px-4 py-2 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-lg text-sm font-medium hover:bg-slate-800 dark:hover:bg-slate-200 active:bg-slate-700 transition-colors"
         >
-          Hinzufügen
+          {t('projects.add')}
         </button>
       </form>
 
@@ -109,8 +111,8 @@ export default function Projects() {
       <div className="space-y-3">
         {projects.length === 0 && (
           <div className="text-center py-12 text-slate-400 dark:text-slate-500">
-            <p className="text-lg">Noch keine Projekte angelegt.</p>
-            <p className="text-sm mt-1">Erstelle dein erstes Projekt oben.</p>
+            <p className="text-lg">{t('projects.emptyTitle')}</p>
+            <p className="text-sm mt-1">{t('projects.emptyHint')}</p>
           </div>
         )}
         {projects.map((p) => {
@@ -148,24 +150,24 @@ export default function Projects() {
                   {p.key}
                 </span>
                 <span className="font-medium text-sm flex-1">{p.name}</span>
-                <span className="text-xs text-slate-400 dark:text-slate-500">{subs.length} Unterprojekte</span>
+                <span className="text-xs text-slate-400 dark:text-slate-500">{t('projects.subProjectsCount', { count: subs.length })}</span>
                 <button
                   onClick={(e) => { e.stopPropagation(); shareProject(p) }}
                   className="text-xs px-2 py-1 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded transition-colors"
                 >
-                  {copiedId === p.id ? 'Kopiert!' : 'Teilen'}
+                  {copiedId === p.id ? t('projects.copied') : t('projects.share')}
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); toggleActive(p) }}
                   className="text-xs px-2 py-1 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded transition-colors"
                 >
-                  {p.active ? 'Deaktivieren' : 'Aktivieren'}
+                  {p.active ? t('projects.deactivate') : t('projects.activate')}
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); deleteProject(p.id!) }}
                   className="text-xs px-2 py-1 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
                 >
-                  Löschen
+                  {t('common.delete')}
                 </button>
               </div>
 
@@ -175,7 +177,7 @@ export default function Projects() {
                   {/* Project Key & Name */}
                   <div className="flex gap-3">
                     <div>
-                      <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Kürzel</label>
+                      <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">{t('projects.shortcutLabel')}</label>
                       <input
                         type="text"
                         defaultValue={p.key}
@@ -184,7 +186,7 @@ export default function Projects() {
                       />
                     </div>
                     <div className="flex-1">
-                      <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Name</label>
+                      <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">{t('projects.nameLabel')}</label>
                       <input
                         type="text"
                         defaultValue={p.name}
@@ -196,7 +198,7 @@ export default function Projects() {
 
                   {/* Project Color */}
                   <div>
-                    <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Projektfarbe</label>
+                    <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">{t('projects.projectColor')}</label>
                     <div className="flex flex-wrap gap-1.5">
                       {PROJECT_COLORS.map((c) => (
                         <button
@@ -215,13 +217,13 @@ export default function Projects() {
                   {/* Link Template */}
                   <div>
                     <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
-                      Link-Template <span className="text-slate-400 dark:text-slate-500 font-normal">({'{itemNr}'} wird durch die Item-Nr ersetzt)</span>
+                      {t('projects.linkTemplate')} <span className="text-slate-400 dark:text-slate-500 font-normal">{t('projects.linkTemplateHint', { token: '{itemNr}' })}</span>
                     </label>
                     <input
                       type="text"
                       value={p.linkTemplate ?? ''}
                       onChange={(e) => saveLinkTemplate(p.id!, e.target.value)}
-                      placeholder="z.B. https://dev.azure.com/org/project/_workitems/edit/{itemNr}"
+                      placeholder={t('projects.linkTemplatePlaceholder')}
                       className="w-full px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md text-xs font-mono focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-100 focus:border-transparent"
                     />
                   </div>
@@ -237,21 +239,21 @@ export default function Projects() {
                         onClick={() => deleteSubProject(s.id!)}
                         className="text-xs text-red-400 hover:text-red-600 transition-colors"
                       >
-                        Entfernen
+                        {t('projects.remove')}
                       </button>
                     </div>
                   ))}
                   <form onSubmit={(e) => addSubProject(e, p.id!)} className="flex gap-2 pt-1">
                     <input
                       type="text"
-                      placeholder="Kürzel"
+                      placeholder={t('projects.shortcutLabel')}
                       value={subKey}
                       onChange={(e) => setSubKey(e.target.value)}
                       className="w-28 px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-100 focus:border-transparent"
                     />
                     <input
                       type="text"
-                      placeholder="Name"
+                      placeholder={t('projects.nameLabel')}
                       value={subName}
                       onChange={(e) => setSubName(e.target.value)}
                       className="flex-1 px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-100 focus:border-transparent"
@@ -260,7 +262,7 @@ export default function Projects() {
                       type="submit"
                       className="px-3 py-1.5 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-md text-xs font-medium hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors"
                     >
-                      + Unterprojekt
+                      {t('projects.subProjectAdd')}
                     </button>
                   </form>
                 </div>
