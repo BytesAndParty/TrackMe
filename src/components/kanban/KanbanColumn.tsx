@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { type Item, type ItemStatus, type Project } from '../../db'
 import KanbanCard from './KanbanCard'
+import { useTranslation } from 'react-i18next'
 
 interface KanbanColumnProps {
   title: string
@@ -23,6 +24,7 @@ export default function KanbanColumn({
   onAddItem,
   itemTimeMap,
 }: KanbanColumnProps) {
+  const { t } = useTranslation()
   const [dragOver, setDragOver] = useState(false)
 
   const projectMap = new Map(projects.map((p) => [p.id, p]))
@@ -56,7 +58,7 @@ export default function KanbanColumn({
           type="button"
           onClick={() => onAddItem(status)}
           className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-          title="Neues Item"
+          title={t('kanban.newItem')}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
@@ -74,7 +76,7 @@ export default function KanbanColumn({
           />
         ))}
         {items.length === 0 && (
-          <p className="text-xs text-slate-300 dark:text-slate-600 text-center py-8">Keine Items</p>
+          <p className="text-xs text-slate-300 dark:text-slate-600 text-center py-8">{t('kanban.noItems')}</p>
         )}
       </div>
     </div>

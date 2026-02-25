@@ -1,5 +1,6 @@
 import { type Item, type ItemStatus, type Project } from '../../db'
 import KanbanColumn from './KanbanColumn'
+import { useTranslation } from 'react-i18next'
 
 interface KanbanBoardProps {
   columns: Record<ItemStatus, Item[]>
@@ -10,10 +11,10 @@ interface KanbanBoardProps {
   itemTimeMap: Map<string, number>
 }
 
-const columnConfig: { status: ItemStatus; title: string }[] = [
-  { status: 'todo', title: 'Zu erledigen' },
-  { status: 'in_progress', title: 'In Arbeit' },
-  { status: 'done', title: 'Erledigt' },
+const columnConfig: { status: ItemStatus }[] = [
+  { status: 'todo' },
+  { status: 'in_progress' },
+  { status: 'done' },
 ]
 
 export default function KanbanBoard({
@@ -24,12 +25,14 @@ export default function KanbanBoard({
   onAddItem,
   itemTimeMap,
 }: KanbanBoardProps) {
+  const { t } = useTranslation()
+
   return (
     <div className="grid grid-cols-3 gap-4">
-      {columnConfig.map(({ status, title }) => (
+      {columnConfig.map(({ status }) => (
         <KanbanColumn
           key={status}
-          title={title}
+          title={t(`kanban.column.${status}`)}
           status={status}
           items={columns[status]}
           projects={projects}

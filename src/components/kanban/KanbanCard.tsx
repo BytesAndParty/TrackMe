@@ -1,5 +1,6 @@
 import { type Item, type Project } from '../../db'
 import { formatDuration } from '../../lib/parser'
+import { useTranslation } from 'react-i18next'
 
 interface KanbanCardProps {
   item: Item
@@ -9,6 +10,7 @@ interface KanbanCardProps {
 }
 
 export default function KanbanCard({ item, project, onClick, timeMinutes }: KanbanCardProps) {
+  const { t } = useTranslation()
   const estimatedMinutes = item.estimatedMinutes ?? 0
   const hasEstimate = estimatedMinutes > 0
   const remainingMinutes = estimatedMinutes - timeMinutes
@@ -46,10 +48,10 @@ export default function KanbanCard({ item, project, onClick, timeMinutes }: Kanb
       {hasEstimate && (
         <p className={`text-[11px] mt-1 ${remainingMinutes >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
           {remainingMinutes >= 0
-            ? `${formatDuration(remainingMinutes)} übrig`
-            : `${formatDuration(Math.abs(remainingMinutes))} drüber`}
+            ? t('kanban.remaining', { duration: formatDuration(remainingMinutes) })
+            : t('kanban.over', { duration: formatDuration(Math.abs(remainingMinutes)) })}
           {' · '}
-          geplant {formatDuration(estimatedMinutes)}
+          {t('kanban.planned', { duration: formatDuration(estimatedMinutes) })}
         </p>
       )}
       {item.notes && (
