@@ -1,20 +1,23 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
+import { useTranslation } from 'react-i18next'
 import { db } from '../db'
 import { formatDuration, toLocalISO, getISOWeek, getMondayOfWeek } from '../lib/parser'
-
-const MONTH_NAMES = [
-  'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
-  'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember',
-]
-
-const DAY_LABELS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
 
 interface WeekRow {
   weekNumber: number
   mondayDate: string
   days: (string | null)[]
+}
+
+function getDayLabels(locale: string): string[] {
+  const monday = new Date(Date.UTC(2024, 0, 1))
+  return Array.from({ length: 7 }, (_, index) =>
+    new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(
+      new Date(monday.getTime() + index * 86400000)
+    )
+  )
 }
 
 function getMonthWeeks(year: number, month: number): WeekRow[] {
@@ -48,10 +51,14 @@ function getMonthWeeks(year: number, month: number): WeekRow[] {
 }
 
 export default function MonthView() {
+  const { t, i18n } = useTranslation()
   const nav = useNavigate()
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth())
+  const locale = i18n.resolvedLanguage === 'en' ? 'en-US' : 'de-DE'
+  const monthLabel = new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(new Date(year, month, 1))
+  const dayLabels = getDayLabels(locale)
 
   const firstISO = `${year}-${String(month + 1).padStart(2, '0')}-01`
   const lastISO = `${year}-${String(month + 1).padStart(2, '0')}-${String(new Date(year, month + 1, 0).getDate()).padStart(2, '0')}`
@@ -98,9 +105,13 @@ export default function MonthView() {
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8l4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
           </button>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">{MONTH_NAMES[month]} {year}</h1>
+            <h1 className="text-2xl font-bold tracking-tight">{monthLabel}</h1>
             <p className="text-slate-500 dark:text-slate-400 text-sm">
-              {formatDuration(totalMinutes)} gesamt &middot; {daysWorked} Tage &middot; ~{formatDuration(avgPerDay)}/Tag
+              {t('monthView.summary', {
+                total: formatDuration(totalMinutes),
+                days: daysWorked,
+                avg: formatDuration(avgPerDay),
+              })}
             </p>
           </div>
           <button
@@ -115,7 +126,7 @@ export default function MonthView() {
             onClick={() => { setYear(now.getFullYear()); setMonth(now.getMonth()) }}
             className="text-xs px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors font-medium"
           >
-            Aktueller Monat
+            {t('monthView.currentMonth')}
           </button>
         )}
       </div>
@@ -125,9 +136,9 @@ export default function MonthView() {
         <div className="grid grid-cols-8 gap-1">
           {/* Header row */}
           <div className="text-center text-xs font-medium text-slate-300 dark:text-slate-600 uppercase tracking-wider py-2">
-            KW
+            {t('monthView.weekHeader')}
           </div>
-          {DAY_LABELS.map((label) => (
+          {dayLabels.map((label) => (
             <div key={label} className="text-center text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider py-2">
               {label}
             </div>
