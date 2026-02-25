@@ -95,8 +95,10 @@ export default function DayView() {
           byItem.set(itemKey, { label: itemLabel, texts: new Set() })
         }
 
-        const description = entry.taskText.trim() || entry.notes.trim()
-        if (description) byItem.get(itemKey)!.texts.add(description)
+        const taskText = entry.taskText.trim()
+        const notes = entry.notes.trim()
+        if (taskText) byItem.get(itemKey)!.texts.add(taskText)
+        if (notes && notes !== taskText) byItem.get(itemKey)!.texts.add(notes)
       }
 
       const itemLines = Array.from(byItem.values()).map((item) => {
