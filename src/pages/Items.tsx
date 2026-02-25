@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { useNavigate, Outlet } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
+import { useTranslation } from 'react-i18next'
 import { db, type ItemStatus } from '../db'
 import KanbanBoard from '../components/kanban/KanbanBoard'
 import ItemDetailModal from '../components/kanban/ItemDetailModal'
 
 export default function Items() {
+  const { t } = useTranslation()
   const [filterProjectId, setFilterProjectId] = useState<number | undefined>()
   const [creatingWithStatus, setCreatingWithStatus] = useState<ItemStatus | null>(null)
   const navigate = useNavigate()
@@ -54,13 +56,13 @@ export default function Items() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-bold">Items</h1>
+        <h1 className="text-xl font-bold">{t('layout.nav.items')}</h1>
         <select
           value={filterProjectId ?? ''}
           onChange={(e) => setFilterProjectId(e.target.value ? Number(e.target.value) : undefined)}
           className="text-sm border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-900/10 dark:focus:ring-slate-100/10"
         >
-          <option value="">Alle Projekte</option>
+          <option value="">{t('items.allProjects')}</option>
           {projects
             .filter((p) => p.active)
             .map((p) => (
