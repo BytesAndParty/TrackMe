@@ -326,7 +326,7 @@ export default function Todo() {
               >
                 <option value="">Kein Item verlinkt</option>
                 {items
-                  .filter((item) => Boolean(item.id))
+                  .filter((item) => Boolean(item.id) && item.status !== 'done')
                   .map((item) => (
                     <option key={item.id} value={item.id}>
                       {buildItemLabel(item, projectKeyById.get(item.projectId))}
