@@ -1,15 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
+import { useTranslation } from 'react-i18next'
 import { db, type ItemStatus } from '../../db'
 import { formatDuration, formatDateShort } from '../../lib/parser'
 import MarkdownView from '../MarkdownView'
-
-const statusLabels: Record<ItemStatus, string> = {
-  todo: 'Zu erledigen',
-  in_progress: 'In Arbeit',
-  done: 'Erledigt',
-}
 
 function minutesToHoursInput(minutes?: number): string {
   if (!minutes || minutes <= 0) return ''
@@ -26,6 +21,7 @@ function parseEstimatedMinutes(rawHours: string): number | undefined {
 }
 
 export default function ItemDetailOverlay() {
+  const { t } = useTranslation()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const location = useLocation()
@@ -66,6 +62,12 @@ export default function ItemDetailOverlay() {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [infoCollapsed, setInfoCollapsed] = useState(() => localStorage.getItem('itemDetailInfoCollapsed') === 'true')
   const [notesPreview, setNotesPreview] = useState(false)
+
+  const statusLabels: Record<ItemStatus, string> = {
+    todo: t('itemDetail.status.todo'),
+    in_progress: t('itemDetail.status.in_progress'),
+    done: t('itemDetail.status.done'),
+  }
 
   useEffect(() => {
     if (item) {
@@ -173,20 +175,20 @@ export default function ItemDetailOverlay() {
               >
                 <polyline points="6 9 12 15 18 9" />
               </svg>
-              Projekt-Infos
+              {t('itemDetail.projectInfo')}
             </button>
 
             {!infoCollapsed && (
               <div className="space-y-4">
                 {/* Projekt */}
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Projekt *</label>
+                  <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">{t('itemDetail.projectRequired')}</label>
                   <select
                     value={projectId}
                     onChange={(e) => setProjectId(e.target.value ? Number(e.target.value) : '')}
                     className={inputClass}
                   >
-                    <option value="">Projekt wählen...</option>
+                    <option value="">{t('itemDetail.selectProject')}</option>
                     {projects
                       .filter((p) => p.active)
                       .map((p) => (
@@ -200,17 +202,17 @@ export default function ItemDetailOverlay() {
                 {/* Item Nr + Status */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Item Nr</label>
+                    <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">{t('itemDetail.itemNr')}</label>
                     <input
                       type="text"
                       value={itemNr}
                       onChange={(e) => setItemNr(e.target.value)}
-                      placeholder="z.B. 1234"
+                      placeholder={t('itemDetail.itemNrPlaceholder')}
                       className={`${inputClass} font-mono`}
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Status</label>
+                    <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">{t('itemDetail.statusLabel')}</label>
                     <select
                       value={status}
                       onChange={(e) => setStatus(e.target.value as ItemStatus)}
@@ -225,45 +227,45 @@ export default function ItemDetailOverlay() {
 
                 {/* Aufwandsschaetzung */}
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Schätzung (Stunden)</label>
+                  <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">{t('itemDetail.estimateHours')}</label>
                   <input
                     type="number"
                     min="0"
                     step="0.25"
                     value={estimatedHours}
                     onChange={(e) => setEstimatedHours(e.target.value)}
-                    placeholder="z.B. 8"
+                    placeholder={t('itemDetail.estimateHoursPlaceholder')}
                     className={inputClass}
                   />
                 </div>
 
                 {/* Titel */}
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Titel *</label>
+                  <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">{t('itemDetail.titleRequired')}</label>
                   <input
                     type="text"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Kurzbeschreibung des Items"
+                    placeholder={t('itemDetail.titlePlaceholder')}
                     className={inputClass}
                   />
                 </div>
 
                 {/* Beschreibung */}
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Beschreibung</label>
+                  <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">{t('itemDetail.description')}</label>
                   <textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     rows={3}
-                    placeholder="Details zum Item..."
+                    placeholder={t('itemDetail.descriptionPlaceholder')}
                     className={`${inputClass} resize-none`}
                   />
                 </div>
 
                 {/* URL */}
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">URL</label>
+                  <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">{t('itemDetail.url')}</label>
                   <input
                     type="url"
                     value={url}
@@ -279,12 +281,12 @@ export default function ItemDetailOverlay() {
           {/* Notizen — always visible */}
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="block text-xs font-medium text-slate-500 dark:text-slate-400">Persönliche Notizen</label>
+              <label className="block text-xs font-medium text-slate-500 dark:text-slate-400">{t('itemDetail.notes')}</label>
               <button
                 type="button"
                 onClick={() => setNotesPreview(!notesPreview)}
                 className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-                title={notesPreview ? 'Bearbeiten' : 'Vorschau'}
+                title={notesPreview ? t('common.edit') : t('common.preview')}
               >
                 {notesPreview ? (
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -304,7 +306,7 @@ export default function ItemDetailOverlay() {
                 {notes.trim() ? (
                   <MarkdownView content={notes} />
                 ) : (
-                  <p className="text-sm text-slate-400 dark:text-slate-500 italic">Keine Notizen vorhanden.</p>
+                  <p className="text-sm text-slate-400 dark:text-slate-500 italic">{t('common.noNotes')}</p>
                 )}
               </div>
             ) : (
@@ -312,7 +314,7 @@ export default function ItemDetailOverlay() {
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={12}
-                placeholder="Eigene Notizen zu diesem Item... (Markdown wird unterstützt)"
+                placeholder={t('itemDetail.notesPlaceholder')}
                 className={`${inputClass} resize-none`}
               />
             )}
@@ -321,14 +323,17 @@ export default function ItemDetailOverlay() {
           {/* Time Entries Section */}
           <div>
             <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-3">
-              Zeiteinträge ({timeEntries.length}) &middot; {formatDuration(totalMinutes)} gesamt
+              {t('itemDetail.timeEntriesSummary', { count: timeEntries.length, duration: formatDuration(totalMinutes) })}
             </h3>
             {hasEstimate && (
               <p className={`text-xs mb-3 ${remainingMinutes >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
-                Schätzung {formatDuration(estimatedMinutes)} &middot; Erfasst {formatDuration(totalMinutes)} &middot;{' '}
-                {remainingMinutes >= 0
-                  ? `${formatDuration(remainingMinutes)} übrig`
-                  : `${formatDuration(Math.abs(remainingMinutes))} drüber`}
+                {t('itemDetail.estimateSummary', {
+                  estimated: formatDuration(estimatedMinutes),
+                  logged: formatDuration(totalMinutes),
+                  balance: remainingMinutes >= 0
+                    ? t('kanban.remaining', { duration: formatDuration(remainingMinutes) })
+                    : t('kanban.over', { duration: formatDuration(Math.abs(remainingMinutes)) }),
+                })}
               </p>
             )}
             {timeEntries.length > 0 ? (
@@ -336,11 +341,11 @@ export default function ItemDetailOverlay() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-slate-100 dark:border-slate-700">
-                      <th className="text-left text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider px-4 py-2">Datum</th>
-                      <th className="text-left text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider px-4 py-2">Start</th>
-                      <th className="text-left text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider px-4 py-2">Ende</th>
-                      <th className="text-right text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider px-4 py-2">Dauer</th>
-                      <th className="text-left text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider px-4 py-2">Kommentar</th>
+                      <th className="text-left text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider px-4 py-2">{t('itemDetail.date')}</th>
+                      <th className="text-left text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider px-4 py-2">{t('itemDetail.start')}</th>
+                      <th className="text-left text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider px-4 py-2">{t('itemDetail.end')}</th>
+                      <th className="text-right text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider px-4 py-2">{t('common.duration')}</th>
+                      <th className="text-left text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider px-4 py-2">{t('itemDetail.comment')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
@@ -358,7 +363,7 @@ export default function ItemDetailOverlay() {
                   </tbody>
                   <tfoot>
                     <tr className="border-t border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
-                      <td colSpan={3} className="px-4 py-2 text-xs font-medium text-slate-500 dark:text-slate-400">Gesamt</td>
+                      <td colSpan={3} className="px-4 py-2 text-xs font-medium text-slate-500 dark:text-slate-400">{t('common.total')}</td>
                       <td className="px-4 py-2 text-right text-sm tabular-nums font-bold">{formatDuration(totalMinutes)}</td>
                       <td></td>
                     </tr>
@@ -366,7 +371,7 @@ export default function ItemDetailOverlay() {
                 </table>
               </div>
             ) : (
-              <p className="text-sm text-slate-400 dark:text-slate-500">Keine Zeiteinträge vorhanden.</p>
+              <p className="text-sm text-slate-400 dark:text-slate-500">{t('itemDetail.noTimeEntries')}</p>
             )}
           </div>
         </div>
@@ -376,12 +381,12 @@ export default function ItemDetailOverlay() {
           <div>
             {confirmDelete ? (
               <div className="flex items-center gap-2">
-                <span className="text-xs text-red-600">Wirklich löschen?</span>
+                <span className="text-xs text-red-600">{t('itemDetail.confirmDelete')}</span>
                 <button type="button" onClick={handleDelete} className="text-xs font-medium text-red-600 hover:text-red-700">
-                  Ja
+                  {t('common.yes')}
                 </button>
                 <button type="button" onClick={() => setConfirmDelete(false)} className="text-xs font-medium text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
-                  Nein
+                  {t('common.no')}
                 </button>
               </div>
             ) : (
@@ -390,7 +395,7 @@ export default function ItemDetailOverlay() {
                 onClick={() => setConfirmDelete(true)}
                 className="text-sm text-red-500 hover:text-red-700 transition-colors"
               >
-                Löschen
+                {t('common.delete')}
               </button>
             )}
           </div>
@@ -400,7 +405,7 @@ export default function ItemDetailOverlay() {
               onClick={close}
               className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
             >
-              Abbrechen
+              {t('common.cancel')}
             </button>
             <button
               type="button"
@@ -408,7 +413,7 @@ export default function ItemDetailOverlay() {
               disabled={!projectId || !title.trim()}
               className="px-4 py-2 text-sm font-medium text-white bg-slate-900 dark:bg-slate-100 dark:text-slate-900 rounded-lg hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              Speichern
+              {t('common.save')}
             </button>
           </div>
         </div>

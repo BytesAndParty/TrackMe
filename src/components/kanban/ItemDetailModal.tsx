@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { db, type Item, type ItemStatus, type Project } from '../../db'
 import MarkdownView from '../MarkdownView'
 
@@ -31,6 +32,7 @@ export default function ItemDetailModal({
   projects,
   onClose,
 }: ItemDetailModalProps) {
+  const { t } = useTranslation()
   const isEdit = !!item
 
   const [projectId, setProjectId] = useState<number | ''>(item?.projectId ?? defaultProjectId ?? '')
@@ -108,9 +110,9 @@ export default function ItemDetailModal({
   }
 
   const statusLabels: Record<ItemStatus, string> = {
-    todo: 'Zu erledigen',
-    in_progress: 'In Arbeit',
-    done: 'Erledigt',
+    todo: t('itemDetail.status.todo'),
+    in_progress: t('itemDetail.status.in_progress'),
+    done: t('itemDetail.status.done'),
   }
 
   const inputClass = "w-full border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 dark:focus:ring-slate-100/10"
@@ -124,7 +126,7 @@ export default function ItemDetailModal({
       <div className="relative bg-white dark:bg-slate-900 rounded-xl shadow-xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto">
         <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
           <h2 className="text-lg font-bold">
-            {isEdit ? 'Item bearbeiten' : 'Neues Item'}
+            {isEdit ? t('itemDetail.editItem') : t('itemDetail.newItem')}
           </h2>
           <button
             type="button"
@@ -158,20 +160,20 @@ export default function ItemDetailModal({
               >
                 <polyline points="6 9 12 15 18 9" />
               </svg>
-              Projekt-Infos
+              {t('itemDetail.projectInfo')}
             </button>
 
             {!infoCollapsed && (
               <div className="space-y-4">
                 {/* Projekt */}
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Projekt *</label>
+                  <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">{t('itemDetail.projectRequired')}</label>
                   <select
                     value={projectId}
                     onChange={(e) => setProjectId(e.target.value ? Number(e.target.value) : '')}
                     className={inputClass}
                   >
-                    <option value="">Projekt wählen...</option>
+                    <option value="">{t('itemDetail.selectProject')}</option>
                     {projects
                       .filter((p) => p.active)
                       .map((p) => (
@@ -185,17 +187,17 @@ export default function ItemDetailModal({
                 {/* Item Nr + Status */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Item Nr</label>
+                    <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">{t('itemDetail.itemNr')}</label>
                     <input
                       type="text"
                       value={itemNr}
                       onChange={(e) => setItemNr(e.target.value)}
-                      placeholder="z.B. 1234"
+                      placeholder={t('itemDetail.itemNrPlaceholder')}
                       className={`${inputClass} font-mono`}
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Status</label>
+                    <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">{t('itemDetail.statusLabel')}</label>
                     <select
                       value={status}
                       onChange={(e) => setStatus(e.target.value as ItemStatus)}
@@ -212,45 +214,45 @@ export default function ItemDetailModal({
 
                 {/* Aufwandsschaetzung */}
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Schätzung (Stunden)</label>
+                  <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">{t('itemDetail.estimateHours')}</label>
                   <input
                     type="number"
                     min="0"
                     step="0.25"
                     value={estimatedHours}
                     onChange={(e) => setEstimatedHours(e.target.value)}
-                    placeholder="z.B. 8"
+                    placeholder={t('itemDetail.estimateHoursPlaceholder')}
                     className={inputClass}
                   />
                 </div>
 
                 {/* Titel */}
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Titel *</label>
+                  <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">{t('itemDetail.titleRequired')}</label>
                   <input
                     type="text"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Kurzbeschreibung des Items"
+                    placeholder={t('itemDetail.titlePlaceholder')}
                     className={inputClass}
                   />
                 </div>
 
                 {/* Beschreibung */}
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Beschreibung</label>
+                  <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">{t('itemDetail.description')}</label>
                   <textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     rows={3}
-                    placeholder="Details zum Item..."
+                    placeholder={t('itemDetail.descriptionPlaceholder')}
                     className={`${inputClass} resize-none`}
                   />
                 </div>
 
                 {/* URL */}
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">URL</label>
+                  <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">{t('itemDetail.url')}</label>
                   <input
                     type="url"
                     value={url}
@@ -266,12 +268,12 @@ export default function ItemDetailModal({
           {/* Notizen — always visible */}
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="block text-xs font-medium text-slate-500 dark:text-slate-400">Persönliche Notizen</label>
+              <label className="block text-xs font-medium text-slate-500 dark:text-slate-400">{t('itemDetail.notes')}</label>
               <button
                 type="button"
                 onClick={() => setNotesPreview(!notesPreview)}
                 className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-                title={notesPreview ? 'Bearbeiten' : 'Vorschau'}
+                title={notesPreview ? t('common.edit') : t('common.preview')}
               >
                 {notesPreview ? (
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -291,7 +293,7 @@ export default function ItemDetailModal({
                 {notes.trim() ? (
                   <MarkdownView content={notes} />
                 ) : (
-                  <p className="text-sm text-slate-400 dark:text-slate-500 italic">Keine Notizen vorhanden.</p>
+                  <p className="text-sm text-slate-400 dark:text-slate-500 italic">{t('common.noNotes')}</p>
                 )}
               </div>
             ) : (
@@ -299,7 +301,7 @@ export default function ItemDetailModal({
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={16}
-                placeholder="Eigene Notizen zu diesem Item... (Markdown wird unterstützt)"
+                placeholder={t('itemDetail.notesPlaceholder')}
                 className={`${inputClass} resize-none`}
               />
             )}
@@ -312,20 +314,20 @@ export default function ItemDetailModal({
             {isEdit && (
               confirmDelete ? (
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-red-600">Wirklich löschen?</span>
+                  <span className="text-xs text-red-600">{t('itemDetail.confirmDelete')}</span>
                   <button
                     type="button"
                     onClick={handleDelete}
                     className="text-xs font-medium text-red-600 hover:text-red-700"
                   >
-                    Ja
+                    {t('common.yes')}
                   </button>
                   <button
                     type="button"
                     onClick={() => setConfirmDelete(false)}
                     className="text-xs font-medium text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
                   >
-                    Nein
+                    {t('common.no')}
                   </button>
                 </div>
               ) : (
@@ -334,7 +336,7 @@ export default function ItemDetailModal({
                   onClick={() => setConfirmDelete(true)}
                   className="text-sm text-red-500 hover:text-red-700 transition-colors"
                 >
-                  Löschen
+                  {t('common.delete')}
                 </button>
               )
             )}
@@ -345,7 +347,7 @@ export default function ItemDetailModal({
               onClick={onClose}
               className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
             >
-              Abbrechen
+              {t('common.cancel')}
             </button>
             <button
               type="button"
@@ -353,7 +355,7 @@ export default function ItemDetailModal({
               disabled={!projectId || !title.trim()}
               className="px-4 py-2 text-sm font-medium text-white bg-slate-900 dark:bg-slate-100 dark:text-slate-900 rounded-lg hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              Speichern
+              {t('common.save')}
             </button>
           </div>
         </div>
