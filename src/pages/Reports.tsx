@@ -97,8 +97,6 @@ export default function Reports() {
   const entries = allEntries.filter(e => e.date >= dateFrom && e.date <= dateTo)
   const projects = useLiveQuery(() => db.projects.toArray()) ?? []
   const subProjects = useLiveQuery(() => db.subProjects.toArray()) ?? []
-  const items = useLiveQuery(() => db.items.toArray()) ?? []
-  const [transferDate, setTransferDate] = useState(dateTo)
 
   const isDark = document.documentElement.classList.contains('dark')
 
@@ -220,94 +218,52 @@ export default function Reports() {
     .sort((a, b) => b.value - a.value)
 
   const totalMinutes = entries.reduce((sum, e) => sum + e.durationMinutes, 0)
-  const transferEntries = allEntries
-    .filter((e) => e.date === transferDate)
-    .sort((a, b) => a.startTime.localeCompare(b.startTime))
-
-  const itemTitleByProjectAndNr = new Map<string, string>()
-  for (const item of items) {
-    itemTitleByProjectAndNr.set(`${item.projectId}-${item.itemNr}`, item.title.trim())
-  }
-
-  type TransferGroup = {
-    key: string
-    label: string
-    minutes: number
-    itemsText: string
-    hoursDecimal: string
-  }
-
-  const transferGroupMap = new Map<string, { label: string; entries: typeof transferEntries; minutes: number }>()
-  for (const entry of transferEntries) {
-    const project = projects.find((p) => p.id === entry.projectId)
-    const subProject = subProjects.find((s) => s.id === entry.subProjectId)
-
-    let key = 'no-project'
-    let label = 'Ohne Projekt'
-
-    if (subProject) {
-      key = `sub-${subProject.id}`
-      label = `${project?.key ?? '?'} / ${subProject.key}`
-    } else if (project) {
-      key = `proj-${project.id}`
-      label = project.key
-    }
-
-    const group = transferGroupMap.get(key)
-    if (group) {
-      group.entries.push(entry)
-      group.minutes += entry.durationMinutes
-    } else {
-      transferGroupMap.set(key, {
-        label,
-        entries: [entry],
-        minutes: entry.durationMinutes,
-      })
-    }
-  }
 
   function formatHoursDecimal(minutes: number): string {
     return (minutes / 60).toFixed(2).replace('.', ',')
   }
 
-  const transferGroups: TransferGroup[] = Array.from(transferGroupMap.entries())
-    .map(([key, group]) => {
-      const byItem = new Map<string, { label: string; texts: Set<string> }>()
-      for (const entry of group.entries) {
-        const itemNr = entry.itemNr.trim()
-        const itemKey = itemNr || '__none__'
-        const itemTitle = entry.projectId
-          ? itemTitleByProjectAndNr.get(`${entry.projectId}-${itemNr}`)
-          : undefined
-        const itemLabel = itemNr
-          ? itemTitle
-            ? `#${itemNr} ${itemTitle}`
-            : `#${itemNr}`
-          : 'Ohne Item'
+  // Text listing: aggregate by project → sub-project
+  type ProjectSummary = {
+    projectId: number | null
+    projectKey: string
+    totalMinutes: number
+    subProjects: { subProjectKey: string; minutes: number }[]
+  }
 
-        if (!byItem.has(itemKey)) {
-          byItem.set(itemKey, { label: itemLabel, texts: new Set() })
-        }
+  const projectSummaryMap = new Map<number | null, { projectKey: string; minutes: number; subs: Map<number | null, { subKey: string; minutes: number }> }>()
+  for (const entry of entries) {
+    const projId = entry.projectId ?? null
+    const project = projId ? projects.find(p => p.id === projId) : undefined
+    const projKey = project?.key ?? 'Ohne Projekt'
 
-        const description = entry.taskText.trim() || entry.notes.trim()
-        if (description) byItem.get(itemKey)!.texts.add(description)
+    if (!projectSummaryMap.has(projId)) {
+      projectSummaryMap.set(projId, { projectKey: projKey, minutes: 0, subs: new Map() })
+    }
+    const projGroup = projectSummaryMap.get(projId)!
+    projGroup.minutes += entry.durationMinutes
+
+    const subId = entry.subProjectId ?? null
+    if (subId) {
+      const sub = subProjects.find(s => s.id === subId)
+      const subKey = sub?.key ?? '?'
+      if (!projGroup.subs.has(subId)) {
+        projGroup.subs.set(subId, { subKey, minutes: 0 })
       }
+      projGroup.subs.get(subId)!.minutes += entry.durationMinutes
+    }
+  }
 
-      const itemLines = Array.from(byItem.values()).map((item) => {
-        const descriptions = Array.from(item.texts)
-        if (descriptions.length === 0) return item.label
-        return `${item.label}: ${descriptions.join(' | ')}`
-      })
-
-      return {
-        key,
-        label: group.label,
-        minutes: group.minutes,
-        itemsText: itemLines.join('\n'),
-        hoursDecimal: formatHoursDecimal(group.minutes),
-      }
-    })
-    .sort((a, b) => b.minutes - a.minutes)
+  const projectSummaries: ProjectSummary[] = Array.from(projectSummaryMap.entries())
+    .map(([projectId, data]) => ({
+      projectId,
+      projectKey: data.projectKey,
+      totalMinutes: data.minutes,
+      subProjects: Array.from(data.subs.values())
+        .map(s => ({ subProjectKey: s.subKey, minutes: s.minutes }))
+        .sort((a, b) => b.minutes - a.minutes),
+    }))
+    .sort((a, b) => b.totalMinutes - a.totalMinutes)
 
   function selectPreset(p: RangePreset) {
     setPreset(p)
@@ -470,67 +426,49 @@ export default function Reports() {
             </ResponsiveContainer>
           </div>
 
-          {/* Daily Transfer View */}
+          {/* Project / SubProject Text Summary */}
           <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm lg:col-span-2">
-            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="text-sm font-medium text-slate-500 dark:text-slate-400">Tages-Transfer nach Unterprojekt</h2>
-                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-                  Gruppierung nach Unterprojekt, ohne Unterprojekt nach Projekt.
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="date"
-                  value={transferDate}
-                  onChange={(e) => setTransferDate(e.target.value)}
-                  className="border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5 text-sm bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 dark:focus:ring-slate-100/10"
-                />
-              </div>
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700">
+              <h2 className="text-sm font-medium text-slate-500 dark:text-slate-400">Auflistung nach Projekt</h2>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                Stunden pro Projekt und Unterprojekt im gewählten Zeitraum.
+              </p>
             </div>
-            <div className="p-6 space-y-4">
-              {transferGroups.length === 0 ? (
-                <p className="text-sm text-slate-400 dark:text-slate-500">Keine Einträge am ausgewählten Tag.</p>
-              ) : (
-                transferGroups.map((group) => (
-                  <div
-                    key={group.key}
-                    className="rounded-lg border border-slate-200 dark:border-slate-700 p-4 space-y-3 bg-slate-50/40 dark:bg-slate-800/20"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="font-mono text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-1 rounded">
-                        {group.label}
-                      </span>
-                      <span className="text-xs text-slate-500 dark:text-slate-400">
-                        {formatDuration(group.minutes)}
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-[1fr_180px] gap-3">
-                      <div>
-                        <label className="block text-[11px] uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
-                          Items + Beschreibung
-                        </label>
-                        <textarea
-                          readOnly
-                          value={group.itemsText || 'Ohne Item/Beschreibung'}
-                          rows={Math.max(3, group.itemsText.split('\n').length)}
-                          className="w-full border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 resize-y"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
-                          Stunden gesamt (dezimal)
-                        </label>
-                        <input
-                          readOnly
-                          value={group.hoursDecimal}
-                          className="w-full border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 font-mono tabular-nums"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
+            <div className="p-6">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-[11px] uppercase tracking-wider text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-700">
+                    <th className="pb-2 font-medium">Projekt / Unterprojekt</th>
+                    <th className="pb-2 font-medium text-right">Dauer</th>
+                    <th className="pb-2 font-medium text-right">Dezimal</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {projectSummaries.map((proj) => (
+                    <>
+                      <tr key={`proj-${proj.projectId}`} className="border-b border-slate-100 dark:border-slate-700 font-medium">
+                        <td className="py-2 text-slate-800 dark:text-slate-200">{proj.projectKey}</td>
+                        <td className="py-2 text-right text-slate-600 dark:text-slate-300 tabular-nums">{formatDuration(proj.totalMinutes)}</td>
+                        <td className="py-2 text-right text-slate-600 dark:text-slate-300 font-mono tabular-nums">{formatHoursDecimal(proj.totalMinutes)}</td>
+                      </tr>
+                      {proj.subProjects.map((sub) => (
+                        <tr key={`sub-${proj.projectId}-${sub.subProjectKey}`} className="border-b border-slate-50 dark:border-slate-800">
+                          <td className="py-1.5 pl-6 text-slate-500 dark:text-slate-400">{sub.subProjectKey}</td>
+                          <td className="py-1.5 text-right text-slate-500 dark:text-slate-400 tabular-nums">{formatDuration(sub.minutes)}</td>
+                          <td className="py-1.5 text-right text-slate-500 dark:text-slate-400 font-mono tabular-nums">{formatHoursDecimal(sub.minutes)}</td>
+                        </tr>
+                      ))}
+                    </>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t border-slate-200 dark:border-slate-700 font-bold">
+                    <td className="pt-3 text-slate-800 dark:text-slate-200">Gesamt</td>
+                    <td className="pt-3 text-right text-slate-800 dark:text-slate-200 tabular-nums">{formatDuration(totalMinutes)}</td>
+                    <td className="pt-3 text-right text-slate-800 dark:text-slate-200 font-mono tabular-nums">{formatHoursDecimal(totalMinutes)}</td>
+                  </tr>
+                </tfoot>
+              </table>
             </div>
           </div>
         </div>

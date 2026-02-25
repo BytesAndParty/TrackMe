@@ -29,6 +29,92 @@ export default function DayView() {
 
   const totalMinutes = entries.reduce((sum, e) => sum + (e.durationMinutes || 0), 0)
 
+  // Transfer groups: aggregate entries by sub-project (or project if no sub-project)
+  const itemTitleByProjectAndNr = new Map<string, string>()
+  for (const item of items) {
+    itemTitleByProjectAndNr.set(`${item.projectId}-${item.itemNr}`, item.title.trim())
+  }
+
+  type TransferGroup = {
+    key: string
+    label: string
+    minutes: number
+    itemsText: string
+    hoursDecimal: string
+  }
+
+  function formatHoursDecimal(minutes: number): string {
+    return (minutes / 60).toFixed(2).replace('.', ',')
+  }
+
+  const transferGroupMap = new Map<string, { label: string; entries: typeof entries; minutes: number }>()
+  for (const entry of entries) {
+    const project = projects.find((p) => p.id === entry.projectId)
+    const subProject = subProjects.find((s) => s.id === entry.subProjectId)
+
+    let key = 'no-project'
+    let label = 'Ohne Projekt'
+
+    if (subProject) {
+      key = `sub-${subProject.id}`
+      label = `${project?.key ?? '?'} / ${subProject.key}`
+    } else if (project) {
+      key = `proj-${project.id}`
+      label = project.key
+    }
+
+    const group = transferGroupMap.get(key)
+    if (group) {
+      group.entries.push(entry)
+      group.minutes += entry.durationMinutes
+    } else {
+      transferGroupMap.set(key, {
+        label,
+        entries: [entry],
+        minutes: entry.durationMinutes,
+      })
+    }
+  }
+
+  const transferGroups: TransferGroup[] = Array.from(transferGroupMap.entries())
+    .map(([key, group]) => {
+      const byItem = new Map<string, { label: string; texts: Set<string> }>()
+      for (const entry of group.entries) {
+        const itemNr = entry.itemNr.trim()
+        const itemKey = itemNr || '__none__'
+        const itemTitle = entry.projectId
+          ? itemTitleByProjectAndNr.get(`${entry.projectId}-${itemNr}`)
+          : undefined
+        const itemLabel = itemNr
+          ? itemTitle
+            ? `#${itemNr} ${itemTitle}`
+            : `#${itemNr}`
+          : 'Ohne Item'
+
+        if (!byItem.has(itemKey)) {
+          byItem.set(itemKey, { label: itemLabel, texts: new Set() })
+        }
+
+        const description = entry.taskText.trim() || entry.notes.trim()
+        if (description) byItem.get(itemKey)!.texts.add(description)
+      }
+
+      const itemLines = Array.from(byItem.values()).map((item) => {
+        const descriptions = Array.from(item.texts)
+        if (descriptions.length === 0) return item.label
+        return `${item.label}: ${descriptions.join(' | ')}`
+      })
+
+      return {
+        key,
+        label: group.label,
+        minutes: group.minutes,
+        itemsText: itemLines.join('\n'),
+        hoursDecimal: formatHoursDecimal(group.minutes),
+      }
+    })
+    .sort((a, b) => b.minutes - a.minutes)
+
   useEffect(() => {
     const current = searchParams.get('date')
     if (selectedDate === todayISO()) {
@@ -120,6 +206,58 @@ export default function DayView() {
           })
         }
       />
+
+      {/* Daily Transfer by SubProject */}
+      {transferGroups.length > 0 && (
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+          <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700">
+            <h2 className="text-sm font-medium text-slate-500 dark:text-slate-400">Tages-Transfer nach Unterprojekt</h2>
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+              Gruppierung nach Unterprojekt, ohne Unterprojekt nach Projekt.
+            </p>
+          </div>
+          <div className="p-6 space-y-4">
+            {transferGroups.map((group) => (
+              <div
+                key={group.key}
+                className="rounded-lg border border-slate-200 dark:border-slate-700 p-4 space-y-3 bg-slate-50/40 dark:bg-slate-800/20"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <span className="font-mono text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-1 rounded">
+                    {group.label}
+                  </span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400">
+                    {formatDuration(group.minutes)}
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-[1fr_180px] gap-3">
+                  <div>
+                    <label className="block text-[11px] uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
+                      Items + Beschreibung
+                    </label>
+                    <textarea
+                      readOnly
+                      value={group.itemsText || 'Ohne Item/Beschreibung'}
+                      rows={Math.max(3, group.itemsText.split('\n').length)}
+                      className="w-full border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 resize-y"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
+                      Stunden gesamt (dezimal)
+                    </label>
+                    <input
+                      readOnly
+                      value={group.hoursDecimal}
+                      className="w-full border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 font-mono tabular-nums"
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Keyboard hint */}
       <div className="flex items-center gap-4 text-[11px] text-slate-400 dark:text-slate-500">
