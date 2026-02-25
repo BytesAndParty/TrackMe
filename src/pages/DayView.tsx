@@ -211,9 +211,9 @@ export default function DayView() {
       {transferGroups.length > 0 && (
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
           <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700">
-            <h2 className="text-sm font-medium text-slate-500 dark:text-slate-400">Tages-Transfer nach Unterprojekt</h2>
+            <h2 className="text-sm font-medium text-slate-500 dark:text-slate-400">Tagesübersicht</h2>
             <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-              Gruppierung nach Unterprojekt, ohne Unterprojekt nach Projekt.
+              Stunden gruppiert nach Unterprojekt.
             </p>
           </div>
           <div className="p-6 space-y-4">
