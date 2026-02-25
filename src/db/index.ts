@@ -57,6 +57,7 @@ export interface Item {
 
 export interface TodoTask {
   id?: number
+  title: string
   text: string
   linkedItemId?: number
   sortOrder: number
@@ -114,6 +115,19 @@ db.version(5).stores({
   timeEntries: '++id, date, projectId, subProjectId, workItemLinkId, itemNr',
   items: '++id, projectId, itemNr, status, sortOrder',
   todoTasks: '++id, sortOrder, linkedItemId, createdAt',
+})
+
+db.version(6).stores({
+  projects: '++id, key, name, active',
+  subProjects: '++id, projectId, key, name',
+  workItemLinks: '++id, itemId, projectId, subProjectId',
+  timeEntries: '++id, date, projectId, subProjectId, workItemLinkId, itemNr',
+  items: '++id, projectId, itemNr, status, sortOrder',
+  todoTasks: '++id, sortOrder, linkedItemId, createdAt',
+}).upgrade(tx => {
+  return tx.table('todoTasks').toCollection().modify(todo => {
+    if (todo.title === undefined) todo.title = ''
+  })
 })
 
 export const PROJECT_COLORS = [

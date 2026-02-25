@@ -16,12 +16,13 @@ export default function Todo() {
   const items = useLiveQuery(() => db.items.orderBy('sortOrder').toArray()) ?? []
   const projects = useLiveQuery(() => db.projects.toArray()) ?? []
 
+  const [draftTitle, setDraftTitle] = useState('')
   const [draftText, setDraftText] = useState('')
   const [linkedItemId, setLinkedItemId] = useState<number | undefined>()
   const [editingId, setEditingId] = useState<number | null>(null)
   const [dragOverId, setDragOverId] = useState<number | null>(null)
   const [dropPosition, setDropPosition] = useState<DropPosition>(null)
-  const editorRef = useRef<HTMLTextAreaElement>(null)
+  const titleRef = useRef<HTMLInputElement>(null)
 
   const itemById = new Map<number, Item>()
   for (const item of items) {
@@ -34,10 +35,11 @@ export default function Todo() {
   }
 
   function focusEditor() {
-    requestAnimationFrame(() => editorRef.current?.focus())
+    requestAnimationFrame(() => titleRef.current?.focus())
   }
 
   function resetComposer() {
+    setDraftTitle('')
     setDraftText('')
     setLinkedItemId(undefined)
     setEditingId(null)
@@ -51,6 +53,7 @@ export default function Todo() {
   function startEdit(todo: TodoTask) {
     if (!todo.id) return
     setEditingId(todo.id)
+    setDraftTitle(todo.title)
     setDraftText(todo.text)
     setLinkedItemId(todo.linkedItemId)
     focusEditor()
@@ -58,13 +61,15 @@ export default function Todo() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    const title = draftTitle.trim()
     const text = draftText.trim()
-    if (!text) return
+    if (!title && !text) return
 
     const now = new Date().toISOString()
 
     if (editingId) {
       await db.todoTasks.update(editingId, {
+        title,
         text,
         linkedItemId,
         updatedAt: now,
@@ -72,6 +77,7 @@ export default function Todo() {
     } else {
       const maxSort = todos.reduce((max, todo) => Math.max(max, todo.sortOrder), 0)
       await db.todoTasks.add({
+        title,
         text,
         linkedItemId,
         sortOrder: maxSort + 1000,
@@ -225,7 +231,12 @@ export default function Todo() {
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{todo.text}</p>
+                    {todo.title && (
+                      <p className="text-sm font-semibold leading-snug">{todo.title}</p>
+                    )}
+                    {todo.text && (
+                      <p className={`text-sm leading-relaxed whitespace-pre-wrap break-words text-slate-600 dark:text-slate-400${todo.title ? ' mt-1' : ''}`}>{todo.text}</p>
+                    )}
 
                     {linkedItem && linkedItemId && (
                       <Link
@@ -291,12 +302,19 @@ export default function Todo() {
       <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3">
           <form onSubmit={handleSubmit} className="space-y-3">
+            <input
+              ref={titleRef}
+              type="text"
+              value={draftTitle}
+              onChange={(e) => setDraftTitle(e.target.value)}
+              placeholder="Ueberschrift..."
+              className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-slate-900/15 dark:focus:ring-slate-100/15"
+            />
             <textarea
-              ref={editorRef}
               rows={2}
               value={draftText}
               onChange={(e) => setDraftText(e.target.value)}
-              placeholder="Neue Aufgabe eingeben..."
+              placeholder="Beschreibung (optional)..."
               className="w-full resize-none rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/15 dark:focus:ring-slate-100/15"
             />
 
@@ -317,7 +335,7 @@ export default function Todo() {
               </select>
 
               <div className="flex items-center gap-2 sm:ml-auto">
-                {(editingId || draftText || linkedItemId) && (
+                {(editingId || draftTitle || draftText || linkedItemId) && (
                   <button
                     type="button"
                     onClick={resetComposer}
@@ -328,7 +346,7 @@ export default function Todo() {
                 )}
                 <button
                   type="submit"
-                  disabled={!draftText.trim()}
+                  disabled={!draftTitle.trim() && !draftText.trim()}
                   className="px-4 py-2 text-sm font-medium rounded-lg bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors"
                 >
                   {editingId ? 'Aenderung speichern' : 'Todo speichern'}
