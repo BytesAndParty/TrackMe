@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
+import { useTranslation } from 'react-i18next'
 import { db, lightenColor } from '../db'
 import { formatDuration, formatDateShort, getWeekDates, toLocalISO, todayISO, getISOWeek } from '../lib/parser'
 import {
@@ -13,15 +14,7 @@ const COLORS_DARK = ['#e2e8f0', '#60a5fa', '#34d399', '#fbbf24', '#f87171', '#a7
 
 type RangePreset = 'this_week' | 'last_week' | 'pay_period' | 'last_month' | 'last_quarter' | 'this_year' | 'custom'
 
-const PRESET_LABELS: [RangePreset, string][] = [
-  ['this_week', 'Diese Woche'],
-  ['last_week', 'Letzte Woche'],
-  ['pay_period', 'Abrechnungszeitraum'],
-  ['last_month', 'Letzter Monat'],
-  ['last_quarter', 'Letztes Quartal'],
-  ['this_year', 'Dieses Jahr'],
-  ['custom', 'Benutzerdefiniert'],
-]
+const PRESET_KEYS: RangePreset[] = ['this_week', 'last_week', 'pay_period', 'last_month', 'last_quarter', 'this_year', 'custom']
 
 function computeRange(preset: RangePreset, customFrom?: string, customTo?: string): { from: string; to: string } {
   const today = new Date()
@@ -77,12 +70,13 @@ function computeRange(preset: RangePreset, customFrom?: string, customTo?: strin
 }
 
 export default function Reports() {
+  const { t, i18n } = useTranslation()
   const [searchParams, setSearchParams] = useSearchParams()
 
   const [preset, setPreset] = useState<RangePreset>(() => {
     if (searchParams.get('from') && searchParams.get('to')) return 'custom'
     const saved = localStorage.getItem('reportPreset') as RangePreset | null
-    if (saved && PRESET_LABELS.some(([k]) => k === saved)) return saved
+    if (saved && PRESET_KEYS.includes(saved)) return saved
     return 'last_month'
   })
 
@@ -151,7 +145,7 @@ export default function Reports() {
   if (entries.some(e => !e.projectId)) {
     chartSegments.push({
       key: 'no-project',
-      label: 'Ohne Projekt',
+      label: t('reports.noProject'),
       color: fallbackColors[chartSegments.length % fallbackColors.length],
     })
   }
@@ -166,7 +160,7 @@ export default function Reports() {
   let chartTitle: string
 
   if (diffDays <= 14) {
-    chartTitle = 'Stunden pro Tag'
+    chartTitle = t('reports.chartHoursPerDay')
     chartData = []
     const d = new Date(fromDate)
     while (d <= toDate) {
@@ -180,7 +174,7 @@ export default function Reports() {
       d.setDate(d.getDate() + 1)
     }
   } else {
-    chartTitle = 'Stunden pro Woche'
+    chartTitle = t('reports.chartHoursPerWeek')
     chartData = []
     const d = new Date(fromDate)
     const dayOfWeek = d.getDay()
@@ -190,7 +184,7 @@ export default function Reports() {
     while (d <= toDate) {
       const weekDates = getWeekDates(d)
       const weekEntries = entries.filter(e => e.date >= weekDates[0] && e.date <= weekDates[6])
-      const point: Record<string, string | number> = { label: `KW${getISOWeek(d)}` }
+      const point: Record<string, string | number> = { label: t('reports.weekLabel', { week: getISOWeek(d) }) }
       for (const seg of chartSegments) {
         point[seg.key] = weekEntries.filter(e => matchSegment(e, seg.key)).reduce((sum, e) => sum + e.durationMinutes, 0)
       }
@@ -219,8 +213,9 @@ export default function Reports() {
 
   const totalMinutes = entries.reduce((sum, e) => sum + e.durationMinutes, 0)
 
+  const locale = i18n.resolvedLanguage === 'en' ? 'en-US' : 'de-DE'
   function formatHoursDecimal(minutes: number): string {
-    return (minutes / 60).toFixed(2).replace('.', ',')
+    return (minutes / 60).toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
   }
 
   // Text listing: aggregate by project → sub-project
@@ -235,7 +230,7 @@ export default function Reports() {
   for (const entry of entries) {
     const projId = entry.projectId ?? null
     const project = projId ? projects.find(p => p.id === projId) : undefined
-    const projKey = project?.key ?? 'Ohne Projekt'
+    const projKey = project?.key ?? t('reports.noProject')
 
     if (!projectSummaryMap.has(projId)) {
       projectSummaryMap.set(projId, { projectKey: projKey, minutes: 0, subs: new Map() })
@@ -289,7 +284,7 @@ export default function Reports() {
       const tag = (e.target as HTMLElement)?.tagName
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
       e.preventDefault()
-      const keys = PRESET_LABELS.map(([k]) => k)
+      const keys = PRESET_KEYS
       const idx = keys.indexOf(preset)
       if (e.shiftKey) {
         selectPreset(keys[(idx - 1 + keys.length) % keys.length])
@@ -311,16 +306,20 @@ export default function Reports() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Reports</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t('reports.title')}</h1>
         <p className="text-slate-500 dark:text-slate-400 mt-1">
-          {formatDuration(totalMinutes)} erfasst &middot; {entries.length} Einträge &middot;{' '}
-          {formatDateShort(dateFrom)} – {formatDateShort(dateTo)}
+          {t('reports.summary', {
+            duration: formatDuration(totalMinutes),
+            count: entries.length,
+            from: formatDateShort(dateFrom),
+            to: formatDateShort(dateTo),
+          })}
         </p>
       </div>
 
       {/* Date Range Selection */}
       <div className="flex flex-wrap items-center gap-2">
-        {PRESET_LABELS.map(([key, label]) => (
+        {PRESET_KEYS.map((key) => (
           <button
             key={key}
             onClick={() => selectPreset(key)}
@@ -330,7 +329,7 @@ export default function Reports() {
                 : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
             }`}
           >
-            {label}
+            {t(`reports.preset.${key}`)}
           </button>
         ))}
         {preset === 'custom' && (
@@ -354,8 +353,8 @@ export default function Reports() {
 
       {entries.length === 0 ? (
         <div className="text-center py-16 text-slate-400 dark:text-slate-500">
-          <p className="text-lg">Keine Daten im gewählten Zeitraum.</p>
-          <p className="text-sm mt-1">Wähle einen anderen Zeitraum oder erstelle Zeiteinträge.</p>
+          <p className="text-lg">{t('reports.noDataTitle')}</p>
+          <p className="text-sm mt-1">{t('reports.noDataHint')}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -397,7 +396,7 @@ export default function Reports() {
 
           {/* Project Distribution Pie Chart */}
           <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
-            <h2 className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-4">Projektverteilung</h2>
+            <h2 className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-4">{t('reports.projectDistribution')}</h2>
             <ResponsiveContainer width="100%" height={260}>
               <PieChart>
                 <Pie
@@ -414,7 +413,7 @@ export default function Reports() {
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(value: number | undefined) => [formatDuration(value ?? 0), 'Dauer']}
+                  formatter={(value: number | undefined) => [formatDuration(value ?? 0), t('common.duration')]}
                   contentStyle={tooltipStyle}
                   labelStyle={tooltipLabelStyle}
                   itemStyle={tooltipItemStyle}
@@ -429,18 +428,18 @@ export default function Reports() {
           {/* Project / SubProject Text Summary */}
           <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm lg:col-span-2">
             <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700">
-              <h2 className="text-sm font-medium text-slate-500 dark:text-slate-400">Auflistung nach Projekt</h2>
+              <h2 className="text-sm font-medium text-slate-500 dark:text-slate-400">{t('reports.listingTitle')}</h2>
               <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-                Stunden pro Projekt und Unterprojekt im gewählten Zeitraum.
+                {t('reports.listingSubtitle')}
               </p>
             </div>
             <div className="p-6">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-[11px] uppercase tracking-wider text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-700">
-                    <th className="pb-2 font-medium">Projekt / Unterprojekt</th>
-                    <th className="pb-2 font-medium text-right">Dauer</th>
-                    <th className="pb-2 font-medium text-right">Dezimal</th>
+                    <th className="pb-2 font-medium">{t('reports.projectSubproject')}</th>
+                    <th className="pb-2 font-medium text-right">{t('common.duration')}</th>
+                    <th className="pb-2 font-medium text-right">{t('common.decimal')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -463,7 +462,7 @@ export default function Reports() {
                 </tbody>
                 <tfoot>
                   <tr className="border-t border-slate-200 dark:border-slate-700 font-bold">
-                    <td className="pt-3 text-slate-800 dark:text-slate-200">Gesamt</td>
+                    <td className="pt-3 text-slate-800 dark:text-slate-200">{t('reports.overall')}</td>
                     <td className="pt-3 text-right text-slate-800 dark:text-slate-200 tabular-nums">{formatDuration(totalMinutes)}</td>
                     <td className="pt-3 text-right text-slate-800 dark:text-slate-200 font-mono tabular-nums">{formatHoursDecimal(totalMinutes)}</td>
                   </tr>
