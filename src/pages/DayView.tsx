@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useSearchParams, useNavigate, useLocation } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
+import { useTranslation } from 'react-i18next'
 import { db } from '../db'
 import { todayISO, toLocalISO, formatDateLong, formatDuration } from '../lib/parser'
 import EditableGrid from '../components/grid/EditableGrid'
 
 export default function DayView() {
+  const { t } = useTranslation()
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
   const location = useLocation()
@@ -53,7 +55,7 @@ export default function DayView() {
     const subProject = subProjects.find((s) => s.id === entry.subProjectId)
 
     let key = 'no-project'
-    let label = 'Ohne Projekt'
+    let label = t('dayView.noProject')
 
     if (subProject) {
       key = `sub-${subProject.id}`
@@ -89,7 +91,7 @@ export default function DayView() {
           ? itemTitle
             ? `#${itemNr} ${itemTitle}`
             : `#${itemNr}`
-          : 'Ohne Item'
+          : t('dayView.noItem')
 
         if (!byItem.has(itemKey)) {
           byItem.set(itemKey, { label: itemLabel, texts: new Set() })
@@ -156,7 +158,7 @@ export default function DayView() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => void navigateDay(-1)}
-            aria-label="Vorheriger Tag"
+            aria-label={t('dayView.prevDayAria')}
             disabled={isNavigatingDate}
             className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
           >
@@ -167,13 +169,13 @@ export default function DayView() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight">{formatDateLong(selectedDate)}</h1>
             <p className="text-slate-500 dark:text-slate-400 text-sm">
-              {entries.length} {entries.length === 1 ? 'Eintrag' : 'Einträge'} &middot;{' '}
-              {formatDuration(totalMinutes)} gesamt
+              {t('dayView.entriesCount', { count: entries.length })} &middot;{' '}
+              {t('dayView.total', { duration: formatDuration(totalMinutes) })}
             </p>
           </div>
           <button
             onClick={() => void navigateDay(1)}
-            aria-label="Nächster Tag"
+            aria-label={t('dayView.nextDayAria')}
             disabled={isNavigatingDate}
             className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
           >
@@ -185,11 +187,11 @@ export default function DayView() {
         {selectedDate !== todayISO() && (
           <button
             onClick={() => void changeDate(todayISO())}
-            aria-label="Heute"
+            aria-label={t('dayView.today')}
             disabled={isNavigatingDate}
             className="text-xs px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors font-medium"
           >
-            Heute
+            {t('dayView.today')}
           </button>
         )}
       </div>
@@ -213,9 +215,9 @@ export default function DayView() {
       {transferGroups.length > 0 && (
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
           <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700">
-            <h2 className="text-sm font-medium text-slate-500 dark:text-slate-400">Tagesübersicht</h2>
+            <h2 className="text-sm font-medium text-slate-500 dark:text-slate-400">{t('dayView.dailyOverviewTitle')}</h2>
             <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-              Stunden gruppiert nach Unterprojekt.
+              {t('dayView.dailyOverviewSubtitle')}
             </p>
           </div>
           <div className="p-6 space-y-4">
@@ -235,18 +237,18 @@ export default function DayView() {
                 <div className="grid grid-cols-1 md:grid-cols-[1fr_180px] gap-3">
                   <div>
                     <label className="block text-[11px] uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
-                      Items + Beschreibung
+                      {t('dayView.itemsDescriptionLabel')}
                     </label>
                     <textarea
                       readOnly
-                      value={group.itemsText || 'Ohne Item/Beschreibung'}
+                      value={group.itemsText || t('dayView.noItemDescription')}
                       rows={Math.max(3, group.itemsText.split('\n').length)}
                       className="w-full border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 resize-y"
                     />
                   </div>
                   <div>
                     <label className="block text-[11px] uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
-                      Stunden gesamt (dezimal)
+                      {t('dayView.hoursTotalDecimalLabel')}
                     </label>
                     <input
                       readOnly
@@ -263,10 +265,10 @@ export default function DayView() {
 
       {/* Keyboard hint */}
       <div className="flex items-center gap-4 text-[11px] text-slate-400 dark:text-slate-500">
-        <span><kbd className="px-1 py-0.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-[10px]">Tab</kbd> Nächste Zelle</span>
-        <span><kbd className="px-1 py-0.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-[10px]">Enter</kbd> Nächste Zeile</span>
-        <span><kbd className="px-1 py-0.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-[10px]">Esc</kbd> Abbrechen</span>
-        <span>Zeiteingabe: <code className="text-slate-500 dark:text-slate-400">0900</code> <code className="text-slate-500 dark:text-slate-400">9:00</code> <code className="text-slate-500 dark:text-slate-400">18,5</code></span>
+        <span><kbd className="px-1 py-0.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-[10px]">Tab</kbd> {t('dayView.nextCell')}</span>
+        <span><kbd className="px-1 py-0.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-[10px]">Enter</kbd> {t('dayView.nextRow')}</span>
+        <span><kbd className="px-1 py-0.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-[10px]">Esc</kbd> {t('dayView.cancel')}</span>
+        <span>{t('dayView.timeInput')}: <code className="text-slate-500 dark:text-slate-400">0900</code> <code className="text-slate-500 dark:text-slate-400">9:00</code> <code className="text-slate-500 dark:text-slate-400">18,5</code></span>
       </div>
     </div>
   )
