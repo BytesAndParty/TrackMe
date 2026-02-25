@@ -1,14 +1,15 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { useTheme } from '../hooks/useTheme'
+import { useTranslation } from 'react-i18next'
 
 const navItems = [
-  { to: '/', label: 'Tag', icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
-  { to: '/week', label: 'Woche', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' },
-  { to: '/month', label: 'Monat', icon: 'M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6z' },
-  { to: '/reports', label: 'Reports', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
-  { to: '/items', label: 'Items', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01' },
-  { to: '/todo', label: 'Todo', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 11l2 2 4-4M9 17h6' },
-  { to: '/projects', label: 'Projekte', icon: 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z' },
+  { to: '/', key: 'layout.nav.day', icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
+  { to: '/week', key: 'layout.nav.week', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' },
+  { to: '/month', key: 'layout.nav.month', icon: 'M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6z' },
+  { to: '/reports', key: 'layout.nav.reports', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
+  { to: '/items', key: 'layout.nav.items', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01' },
+  { to: '/todo', key: 'layout.nav.todo', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 11l2 2 4-4M9 17h6' },
+  { to: '/projects', key: 'layout.nav.projects', icon: 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z' },
 ]
 
 const themeIcons = {
@@ -33,10 +34,20 @@ const themeIcons = {
   ),
 }
 
-const themeLabels = { light: 'Hell', dark: 'Dunkel', system: 'System' }
-
 export default function Layout() {
   const { theme, cycleTheme } = useTheme()
+  const { t, i18n } = useTranslation()
+  const nextLanguage = i18n.resolvedLanguage === 'en' ? 'de' : 'en'
+
+  const themeLabels = {
+    light: t('layout.theme.light'),
+    dark: t('layout.theme.dark'),
+    system: t('layout.theme.system'),
+  }
+
+  function toggleLanguage() {
+    void i18n.changeLanguage(nextLanguage)
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors">
@@ -71,18 +82,28 @@ export default function Layout() {
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                       <path d={item.icon} />
                     </svg>
-                    <span className="hidden sm:inline">{item.label}</span>
+                    <span className="hidden sm:inline">{t(item.key)}</span>
                   </NavLink>
                 ))}
               </nav>
               <div className="ml-2 border-l border-white/10 pl-2">
-                <button
-                  onClick={cycleTheme}
-                  className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all"
-                  title={themeLabels[theme]}
-                >
-                  {themeIcons[theme]}
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={toggleLanguage}
+                    className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all text-xs font-semibold tracking-wide"
+                    title={t('layout.language.aria')}
+                    aria-label={t('layout.language.aria')}
+                  >
+                    {i18n.resolvedLanguage === 'en' ? t('layout.language.en') : t('layout.language.de')}
+                  </button>
+                  <button
+                    onClick={cycleTheme}
+                    className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all"
+                    title={themeLabels[theme]}
+                  >
+                    {themeIcons[theme]}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
