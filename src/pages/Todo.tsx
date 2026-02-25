@@ -322,6 +322,12 @@ export default function Todo() {
               rows={2}
               value={draftText}
               onChange={(e) => setDraftText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && e.shiftKey) {
+                  e.preventDefault()
+                  e.currentTarget.form?.requestSubmit()
+                }
+              }}
               placeholder={t('todo.descriptionPlaceholder')}
               className="w-full resize-none rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/15 dark:focus:ring-slate-100/15"
             />

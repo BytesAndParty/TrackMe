@@ -349,6 +349,9 @@ export default function Reports() {
             />
           </div>
         )}
+        <div className="flex items-center gap-4 text-[11px] text-slate-400 dark:text-slate-500">
+          <span><kbd className="px-1 py-0.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-[10px]">Tab</kbd> / <kbd className="px-1 py-0.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-[10px]">Shift+Tab</kbd> {t('reports.tabHint')}</span>
+        </div>
       </div>
 
       {entries.length === 0 ? (

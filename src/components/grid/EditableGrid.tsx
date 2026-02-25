@@ -112,6 +112,24 @@ export default function EditableGrid({
         }
         break
 
+      case 'ArrowLeft': {
+        const input = e.currentTarget as HTMLInputElement
+        if (input.selectionStart === 0 && input.selectionStart === input.selectionEnd && colIndex > 0) {
+          e.preventDefault()
+          focusCell(rowIndex, colIndex - 1)
+        }
+        break
+      }
+
+      case 'ArrowRight': {
+        const input = e.currentTarget as HTMLInputElement
+        if (input.selectionStart === input.value.length && input.selectionStart === input.selectionEnd && colIndex < COLUMN_COUNT - 1) {
+          e.preventDefault()
+          focusCell(rowIndex, colIndex + 1)
+        }
+        break
+      }
+
       case 'Delete':
         if (e.ctrlKey || e.metaKey) {
           e.preventDefault()

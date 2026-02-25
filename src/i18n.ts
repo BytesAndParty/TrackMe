@@ -98,6 +98,7 @@ const resources = {
         projectSubproject: 'Projekt / Unterprojekt',
         overall: 'Gesamt',
         noProject: 'Ohne Projekt',
+        tabHint: 'Zeitraum wechseln',
       },
       projects: {
         title: 'Projekte',
@@ -309,6 +310,7 @@ const resources = {
         projectSubproject: 'Project / sub-project',
         overall: 'Total',
         noProject: 'No project',
+        tabHint: 'Switch period',
       },
       projects: {
         title: 'Projects',
