@@ -44,7 +44,7 @@ export default function DayView() {
   }
 
   function formatHoursDecimal(minutes: number): string {
-    return (minutes / 60).toFixed(2).replace('.', ',')
+    return (minutes / 60).toFixed(2)
   }
 
   const transferGroupMap = new Map<string, { label: string; entries: typeof entries; minutes: number }>()
