@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { type TimeEntry, type Project, type SubProject, type Item } from '../../db'
 import { useGridState, type GridRowData } from '../../hooks/useGridState'
 import { calculateDuration, formatDuration } from '../../lib/parser'
+import { useTranslation } from 'react-i18next'
 import TimeCell from './TimeCell'
 import AutocompleteCell from './AutocompleteCell'
 import TextCell from './TextCell'
@@ -27,6 +28,7 @@ export default function EditableGrid({
   onItemClick,
   onCommitAllDirtyReady,
 }: EditableGridProps) {
+  const { t } = useTranslation()
   const { rows, updateCell, commitRow, commitAllDirty, deleteRow, markEditing, unmarkEditing, saveStatus } = useGridState(
     date,
     entries,
@@ -225,20 +227,19 @@ export default function EditableGrid({
     <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-x-clip overflow-y-visible">
       {overlapHintCount > 0 && (
         <div className="px-2 py-2 text-xs text-amber-700 dark:text-amber-300 bg-amber-50/70 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-900/40">
-          Hinweis: {overlapHintCount} {overlapHintCount === 1 ? 'Eintrag überschneidet sich zeitlich' : 'Einträge überschneiden sich zeitlich'}.
-          Es wird nichts automatisch angepasst.
+          {t('grid.overlapHint', { count: overlapHintCount })} {t('grid.overlapExtra')}
         </div>
       )}
       <table className="w-full">
         <thead>
           <tr className="border-b border-slate-100 dark:border-slate-700">
-            <th className="text-left text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider px-2 py-2.5 w-22">Start</th>
-            <th className="text-left text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider px-2 py-2.5 w-22">Ende</th>
-            <th className="text-left text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider px-2 py-2.5 w-32">Projekt</th>
-            <th className="text-left text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider px-2 py-2.5 w-32">Unterprojekt</th>
-            <th className="text-left text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider px-2 py-2.5 w-24">Item Nr</th>
-            <th className="text-left text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider px-2 py-2.5">Kommentar</th>
-            <th className="text-right text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider px-3 py-2.5 w-20">Dauer</th>
+            <th className="text-left text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider px-2 py-2.5 w-22">{t('grid.start')}</th>
+            <th className="text-left text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider px-2 py-2.5 w-22">{t('grid.end')}</th>
+            <th className="text-left text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider px-2 py-2.5 w-32">{t('grid.project')}</th>
+            <th className="text-left text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider px-2 py-2.5 w-32">{t('grid.subProject')}</th>
+            <th className="text-left text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider px-2 py-2.5 w-24">{t('grid.itemNr')}</th>
+            <th className="text-left text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider px-2 py-2.5">{t('grid.comment')}</th>
+            <th className="text-right text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider px-3 py-2.5 w-20">{t('common.duration')}</th>
             <th className="w-10 py-2.5"></th>
           </tr>
         </thead>
@@ -254,7 +255,7 @@ export default function EditableGrid({
                       ? 'border-amber-200 dark:border-amber-900/40 bg-amber-50/40 dark:bg-amber-900/10'
                       : 'border-slate-50 dark:border-slate-800'
                   } ${isEmptyNew ? 'opacity-50' : ''}`}
-                  title={hasConflict ? 'Hinweis: Zeitüberschneidung mit anderem Eintrag' : undefined}
+                  title={hasConflict ? t('grid.overlapTitle') : undefined}
                 >
                 {/* Start */}
                 <td className="grid-cell">
@@ -346,7 +347,7 @@ export default function EditableGrid({
                               rel="noopener noreferrer"
                               className="opacity-0 group-hover:opacity-100 p-1 text-slate-300 dark:text-slate-600 hover:text-blue-600 dark:hover:text-blue-400 transition-all shrink-0"
                               tabIndex={-1}
-                              title="In Azure DevOps öffnen"
+                              title={t('grid.openInAzure')}
                               onClick={(e) => e.stopPropagation()}
                             >
                               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -362,7 +363,7 @@ export default function EditableGrid({
                               onClick={() => onItemClick(item)}
                               className="opacity-0 group-hover:opacity-100 p-1 text-slate-300 dark:text-slate-600 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all shrink-0"
                               tabIndex={-1}
-                              title="Item öffnen"
+                              title={t('grid.openItem')}
                             >
                               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
@@ -386,7 +387,7 @@ export default function EditableGrid({
                     inputRef={(el) => setCellRef(rowIndex, 5, el)}
                     onFocus={() => markEditing(row._key)}
                     onBlur={() => handleRowBlur(row._key)}
-                    placeholder="Beschreibung..."
+                    placeholder={t('grid.descriptionPlaceholder')}
                   />
                 </td>
 
@@ -397,7 +398,7 @@ export default function EditableGrid({
                   </span>
                   {hasConflict && (
                     <div className="text-[10px] leading-3 mt-0.5 text-amber-700 dark:text-amber-300">
-                      Hinweis
+                      {t('grid.hint')}
                     </div>
                   )}
                 </td>
@@ -425,14 +426,14 @@ export default function EditableGrid({
           <tr className="border-t border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
             <td colSpan={6} className="px-2 py-2.5">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Gesamt</span>
+                <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{t('common.total')}</span>
                 
                 {/* Save Status Indicator */}
                 <div className="flex items-center gap-2 mr-4">
                   {saveStatus === 'saving' && (
                     <div className="flex items-center gap-1.5 text-[10px] text-blue-600 dark:text-blue-400 font-medium">
                       <div className="w-1.5 h-1.5 border border-blue-600 dark:border-blue-400 border-t-transparent rounded-full animate-spin" />
-                      Speichern...
+                      {t('grid.saving')}
                     </div>
                   )}
                   {saveStatus === 'saved' && (
@@ -440,7 +441,7 @@ export default function EditableGrid({
                       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="20 6 9 17 4 12" />
                       </svg>
-                      Alle Änderungen gespeichert
+                      {t('grid.saved')}
                     </div>
                   )}
                   {saveStatus === 'error' && (
@@ -448,7 +449,7 @@ export default function EditableGrid({
                       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                         <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
                       </svg>
-                      Fehler beim Speichern
+                      {t('grid.saveError')}
                     </div>
                   )}
                 </div>
