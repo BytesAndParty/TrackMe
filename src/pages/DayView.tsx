@@ -89,9 +89,9 @@ export default function DayView() {
           : undefined
         const itemLabel = itemNr
           ? itemTitle
-            ? `#${itemNr} ${itemTitle}`
-            : `#${itemNr}`
-          : t('dayView.noItem')
+            ? `${itemNr} ${itemTitle}`
+            : `${itemNr}`
+          : ''
 
         if (!byItem.has(itemKey)) {
           byItem.set(itemKey, { label: itemLabel, texts: new Set() })
@@ -105,15 +105,17 @@ export default function DayView() {
 
       const itemLines = Array.from(byItem.values()).map((item) => {
         const descriptions = Array.from(item.texts)
+        if (!item.label && descriptions.length === 0) return ''
+        if (!item.label) return descriptions.join(' | ')
         if (descriptions.length === 0) return item.label
         return `${item.label}: ${descriptions.join(' | ')}`
-      })
+      }).filter(Boolean)
 
       return {
         key,
         label: group.label,
         minutes: group.minutes,
-        itemsText: itemLines.join('\n'),
+        itemsText: itemLines.join(', '),
         hoursDecimal: formatHoursDecimal(group.minutes),
       }
     })
@@ -154,7 +156,7 @@ export default function DayView() {
   return (
     <div className="space-y-6">
       {/* Date Navigation */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between sticky top-14 z-20 bg-slate-50 dark:bg-slate-950 -mx-4 px-4 sm:-mx-6 sm:px-6 -mt-6 pt-6 pb-2">
         <div className="flex items-center gap-3">
           <button
             onClick={() => void navigateDay(-1)}
