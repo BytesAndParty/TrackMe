@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
 import { type TimeEntry, type Project, type SubProject, type Item } from '../../db'
 import { useGridState, type GridRowData } from '../../hooks/useGridState'
 import { calculateDuration, formatDuration } from '../../lib/parser'
@@ -37,6 +37,7 @@ export default function EditableGrid({
   )
 
   const cellRefs = useRef<Map<string, HTMLInputElement>>(new Map())
+  const activeCellKey = useRef<string | null>(null)
 
   useEffect(() => {
     onCommitAllDirtyReady?.(commitAllDirty)
@@ -50,6 +51,7 @@ export default function EditableGrid({
 
   function focusCell(row: number, col: number) {
     const key = `${row}-${col}`
+    activeCellKey.current = key
     const el = cellRefs.current.get(key)
     if (el) {
       el.focus()
@@ -91,7 +93,7 @@ export default function EditableGrid({
       case 'Enter':
         e.preventDefault()
         void commitRow(rowKey)
-        focusCell(rowIndex + 1, colIndex)
+        focusCell(rowIndex + 1, 0)
         break
 
       case 'Escape':
@@ -139,11 +141,40 @@ export default function EditableGrid({
     }
   }
 
+  function handleCellFocus(rowIndex: number, colIndex: number, rowKey: string) {
+    activeCellKey.current = `${rowIndex}-${colIndex}`
+    markEditing(rowKey)
+  }
+
   function handleRowBlur(rowKey: string) {
     unmarkEditing(rowKey)
-    // Removed immediate commitRow here. 
-    // The debounced save in useGridState will handle it.
+    // Clear active cell if focus leaves the grid entirely
+    requestAnimationFrame(() => {
+      const key = activeCellKey.current
+      if (key) {
+        const el = cellRefs.current.get(key)
+        if (!el || document.activeElement !== el) {
+          // Check if focus moved to another grid cell
+          const isInGrid = Array.from(cellRefs.current.values()).some(
+            (cell) => cell === document.activeElement,
+          )
+          if (!isInGrid) {
+            activeCellKey.current = null
+          }
+        }
+      }
+    })
   }
+
+  // Restore focus if it was lost from a grid cell after a re-render (e.g. DB sync)
+  useLayoutEffect(() => {
+    const key = activeCellKey.current
+    if (!key) return
+    const el = cellRefs.current.get(key)
+    if (el && document.activeElement !== el && document.activeElement === document.body) {
+      el.focus()
+    }
+  }, [rows])
 
   function computeDuration(row: GridRowData): string {
     if (!row.startTime || !row.endTime) return '–'
@@ -282,7 +313,7 @@ export default function EditableGrid({
                     onChange={(v) => updateCell(row._key, 'startTime', v)}
                     onKeyDown={(e) => handleCellKeyDown(e, rowIndex, 0, row._key)}
                     inputRef={(el) => setCellRef(rowIndex, 0, el)}
-                    onFocus={() => markEditing(row._key)}
+                    onFocus={() => handleCellFocus(rowIndex, 0, row._key)}
                     onBlur={() => handleRowBlur(row._key)}
                   />
                 </td>
@@ -294,7 +325,7 @@ export default function EditableGrid({
                     onChange={(v) => updateCell(row._key, 'endTime', v)}
                     onKeyDown={(e) => handleCellKeyDown(e, rowIndex, 1, row._key)}
                     inputRef={(el) => setCellRef(rowIndex, 1, el)}
-                    onFocus={() => markEditing(row._key)}
+                    onFocus={() => handleCellFocus(rowIndex, 1, row._key)}
                     onBlur={() => handleRowBlur(row._key)}
                   />
                 </td>
@@ -321,7 +352,7 @@ export default function EditableGrid({
                     }}
                     onKeyDown={(e) => handleCellKeyDown(e, rowIndex, 2, row._key)}
                     inputRef={(el) => setCellRef(rowIndex, 2, el)}
-                    onFocus={() => markEditing(row._key)}
+                    onFocus={() => handleCellFocus(rowIndex, 2, row._key)}
                     onBlur={() => handleRowBlur(row._key)}
                   />
                 </td>
@@ -334,7 +365,7 @@ export default function EditableGrid({
                     onChange={(v) => updateCell(row._key, 'subProject', v)}
                     onKeyDown={(e) => handleCellKeyDown(e, rowIndex, 3, row._key)}
                     inputRef={(el) => setCellRef(rowIndex, 3, el)}
-                    onFocus={() => markEditing(row._key)}
+                    onFocus={() => handleCellFocus(rowIndex, 3, row._key)}
                     onBlur={() => handleRowBlur(row._key)}
                   />
                 </td>
@@ -349,7 +380,7 @@ export default function EditableGrid({
                         onChange={(v) => updateCell(row._key, 'itemNr', v)}
                         onKeyDown={(e) => handleCellKeyDown(e, rowIndex, 4, row._key)}
                         inputRef={(el) => setCellRef(rowIndex, 4, el)}
-                        onFocus={() => markEditing(row._key)}
+                        onFocus={() => handleCellFocus(rowIndex, 4, row._key)}
                         onBlur={() => handleRowBlur(row._key)}
                       />
                     </div>
@@ -403,7 +434,7 @@ export default function EditableGrid({
                     onChange={(v) => updateCell(row._key, 'taskText', v)}
                     onKeyDown={(e) => handleCellKeyDown(e, rowIndex, 5, row._key)}
                     inputRef={(el) => setCellRef(rowIndex, 5, el)}
-                    onFocus={() => markEditing(row._key)}
+                    onFocus={() => handleCellFocus(rowIndex, 5, row._key)}
                     onBlur={() => handleRowBlur(row._key)}
                     placeholder={t('grid.descriptionPlaceholder')}
                   />

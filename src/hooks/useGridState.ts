@@ -118,7 +118,7 @@ export function useGridState(
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved')
   
   const rowsRef = useRef<GridRowData[]>(initialRows)
-  const editingRows = useRef(new Set<string>())
+  const editingRows = useRef(new Map<string, number>())
   const pendingCommits = useRef(new Map<string, Promise<void>>())
   const lastSyncRef = useRef<string>('')
 
@@ -145,7 +145,7 @@ export function useGridState(
       const existing = prev.find((r) => r._id === entry.id)
       
       // Keep local state if row is being edited OR is dirty (waiting for save)
-      if (existing && (editingRows.current.has(existing._key) || existing._dirty)) {
+      if (existing && ((editingRows.current.get(existing._key) ?? 0) > 0 || existing._dirty)) {
         return existing
       }
 
@@ -174,18 +174,25 @@ export function useGridState(
     // Ensure there's always an empty row at the end
     const hasEmpty = mergedRows.some((r) => r._isNew && !r._dirty)
     if (!hasEmpty) {
-      mergedRows.push(createEmptyRow())
+      // Reuse existing empty row to preserve its React key and avoid focus loss
+      const existingEmpty = prev.find((r) => r._isNew && !r._dirty && !r._id)
+      mergedRows.push(existingEmpty ?? createEmptyRow())
     }
 
     setRowsImmediate(mergedRows)
   }, [dbEntries, projects, subProjects, setRowsImmediate])
 
   const markEditing = (rowKey: string) => {
-    editingRows.current.add(rowKey)
+    editingRows.current.set(rowKey, (editingRows.current.get(rowKey) ?? 0) + 1)
   }
 
   const unmarkEditing = (rowKey: string) => {
-    editingRows.current.delete(rowKey)
+    const count = (editingRows.current.get(rowKey) ?? 0) - 1
+    if (count <= 0) {
+      editingRows.current.delete(rowKey)
+    } else {
+      editingRows.current.set(rowKey, count)
+    }
   }
 
   const runCommitRow = useCallback(async (rowKey: string): Promise<void> => {
