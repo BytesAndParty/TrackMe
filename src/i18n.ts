@@ -125,6 +125,8 @@ const resources = {
       },
       items: {
         allProjects: 'Alle Projekte',
+        noProjectsHint: 'Erstelle zuerst ein Projekt, um Items anlegen zu können.',
+        noProjectsAction: 'Projekt erstellen',
       },
       todo: {
         subtitle: 'Klick auf ein Todo zum Bearbeiten. Per Drag and Drop kannst du die Reihenfolge ändern.',
@@ -183,6 +185,22 @@ const resources = {
         remaining: '{{duration}} übrig',
         over: '{{duration}} drüber',
         planned: 'geplant {{duration}}',
+      },
+      welcome: {
+        title: 'Willkommen bei TrackMe!',
+        subtitle: 'In drei kurzen Schritten bist du startklar.',
+        dismiss: 'Ausblenden',
+        step1Title: 'Projekt anlegen',
+        step1Desc: 'Erstelle dein erstes Projekt, um Zeiten zuordnen zu können.',
+        step1Action: 'Projekt erstellen',
+        step1Done: 'Projekt vorhanden',
+        step2Title: 'Item erstellen',
+        step2Desc: 'Lege ein Arbeitspaket oder Ticket auf dem Kanban-Board an.',
+        step2Action: 'Item erstellen',
+        step2Done: 'Item vorhanden',
+        step3Title: 'Zeit erfassen',
+        step3Desc: 'Trage deinen ersten Zeiteintrag im Grid ein.',
+        step3Done: 'Zeiteintrag vorhanden',
       },
       itemDetail: {
         status: {
@@ -337,6 +355,8 @@ const resources = {
       },
       items: {
         allProjects: 'All projects',
+        noProjectsHint: 'Create a project first so you can add items.',
+        noProjectsAction: 'Create project',
       },
       todo: {
         subtitle: 'Click a todo to edit it. Use drag and drop to reorder.',
@@ -395,6 +415,22 @@ const resources = {
         remaining: '{{duration}} left',
         over: '{{duration}} over',
         planned: 'planned {{duration}}',
+      },
+      welcome: {
+        title: 'Welcome to TrackMe!',
+        subtitle: 'Three quick steps to get you started.',
+        dismiss: 'Hide',
+        step1Title: 'Create a project',
+        step1Desc: 'Set up your first project so you can assign time entries.',
+        step1Action: 'Create project',
+        step1Done: 'Project created',
+        step2Title: 'Create an item',
+        step2Desc: 'Add a work package or ticket to your Kanban board.',
+        step2Action: 'Create item',
+        step2Done: 'Item created',
+        step3Title: 'Log time',
+        step3Desc: 'Enter your first time entry in the grid.',
+        step3Done: 'Time entry logged',
       },
       itemDetail: {
         status: {
