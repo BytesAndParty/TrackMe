@@ -110,7 +110,10 @@ export default function Projects() {
       {/* Project List */}
       <div className="space-y-3">
         {projects.length === 0 && (
-          <div className="text-center py-12 text-slate-400 dark:text-slate-500">
+          <div className="text-center py-16 text-slate-400 dark:text-slate-500">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto text-slate-300 dark:text-slate-600 mb-4">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+            </svg>
             <p className="text-lg">{t('projects.emptyTitle')}</p>
             <p className="text-sm mt-1">{t('projects.emptyHint')}</p>
           </div>

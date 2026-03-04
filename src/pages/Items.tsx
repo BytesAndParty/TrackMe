@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, Outlet } from 'react-router-dom'
+import { Link, useNavigate, Outlet } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useTranslation } from 'react-i18next'
 import { db, type ItemStatus } from '../db'
@@ -73,14 +73,29 @@ export default function Items() {
         </select>
       </div>
 
-      <KanbanBoard
-        columns={columns}
-        projects={projects}
-        onCardClick={(item) => navigate(`/items/${item.id}`)}
-        onDrop={handleDrop}
-        onAddItem={(status) => setCreatingWithStatus(status)}
-        itemTimeMap={itemTimeMap}
-      />
+      {projects.length === 0 ? (
+        <div className="text-center py-16">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto text-slate-300 dark:text-slate-600 mb-4">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+          </svg>
+          <p className="text-slate-500 dark:text-slate-400">{t('items.noProjectsHint')}</p>
+          <Link
+            to="/projects"
+            className="inline-flex items-center mt-3 text-sm font-medium px-4 py-2 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-lg hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors"
+          >
+            {t('items.noProjectsAction')}
+          </Link>
+        </div>
+      ) : (
+        <KanbanBoard
+          columns={columns}
+          projects={projects}
+          onCardClick={(item) => navigate(`/items/${item.id}`)}
+          onDrop={handleDrop}
+          onAddItem={(status) => setCreatingWithStatus(status)}
+          itemTimeMap={itemTimeMap}
+        />
+      )}
 
       <Outlet />
 
