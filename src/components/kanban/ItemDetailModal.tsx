@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { db, type Item, type ItemStatus, type Project } from '../../db'
-import MarkdownView from '../MarkdownView'
+import ItemDetailForm from './ItemDetailForm'
+import { minutesToHoursInput, parseEstimatedMinutes } from './itemDetailUtils'
 
 interface ItemDetailModalProps {
   item?: Item
@@ -9,20 +10,6 @@ interface ItemDetailModalProps {
   defaultProjectId?: number
   projects: Project[]
   onClose: () => void
-}
-
-function minutesToHoursInput(minutes?: number): string {
-  if (!minutes || minutes <= 0) return ''
-  const hours = minutes / 60
-  return Number.isInteger(hours) ? String(hours) : hours.toFixed(2).replace(/\.?0+$/, '')
-}
-
-function parseEstimatedMinutes(rawHours: string): number | undefined {
-  const normalized = rawHours.trim().replace(',', '.')
-  if (!normalized) return undefined
-  const hours = Number(normalized)
-  if (!Number.isFinite(hours) || hours <= 0) return undefined
-  return Math.round(hours * 60)
 }
 
 export default function ItemDetailModal({
@@ -56,7 +43,7 @@ export default function ItemDetailModal({
   }, [onClose])
 
   function toggleInfoCollapsed() {
-    setInfoCollapsed(prev => {
+    setInfoCollapsed((prev) => {
       const next = !prev
       localStorage.setItem('itemDetailInfoCollapsed', String(next))
       return next
@@ -109,210 +96,57 @@ export default function ItemDetailModal({
     }
   }
 
-  const statusLabels: Record<ItemStatus, string> = {
-    todo: t('itemDetail.status.todo'),
-    in_progress: t('itemDetail.status.in_progress'),
-    done: t('itemDetail.status.done'),
-  }
-
-  const inputClass = "w-full border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 dark:focus:ring-slate-100/10"
-
   return (
     <div className="fixed inset-0 z-100 flex items-center justify-center">
-      {/* Backdrop */}
       <div className="absolute inset-0 bg-black/30 dark:bg-black/50" onClick={onClose} />
 
-      {/* Panel */}
       <div className="relative bg-white dark:bg-slate-900 rounded-xl shadow-xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto">
         <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
-          <h2 className="text-lg font-bold">
-            {isEdit ? t('itemDetail.editItem') : t('itemDetail.newItem')}
-          </h2>
+          <h2 className="text-lg font-bold">{isEdit ? t('itemDetail.editItem') : t('itemDetail.newItem')}</h2>
           <button
             type="button"
             onClick={onClose}
             className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
         </div>
 
         <div className="px-6 py-4 space-y-6">
-          {/* Collapsible Project Info */}
-          <div>
-            <button
-              type="button"
-              onClick={toggleInfoCollapsed}
-              className="flex items-center gap-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 transition-colors mb-3"
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className={`transition-transform ${infoCollapsed ? '-rotate-90' : ''}`}
-              >
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-              {t('itemDetail.projectInfo')}
-            </button>
-
-            {!infoCollapsed && (
-              <div className="space-y-4">
-                {/* Projekt */}
-                <div>
-                  <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">{t('itemDetail.projectRequired')}</label>
-                  <select
-                    value={projectId}
-                    onChange={(e) => setProjectId(e.target.value ? Number(e.target.value) : '')}
-                    className={inputClass}
-                  >
-                    <option value="">{t('itemDetail.selectProject')}</option>
-                    {projects
-                      .filter((p) => p.active)
-                      .map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.key} – {p.name}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-
-                {/* Item Nr + Status */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">{t('itemDetail.itemNr')}</label>
-                    <input
-                      type="text"
-                      value={itemNr}
-                      onChange={(e) => setItemNr(e.target.value)}
-                      placeholder={t('itemDetail.itemNrPlaceholder')}
-                      className={`${inputClass} font-mono`}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">{t('itemDetail.statusLabel')}</label>
-                    <select
-                      value={status}
-                      onChange={(e) => setStatus(e.target.value as ItemStatus)}
-                      className={inputClass}
-                    >
-                      {(Object.entries(statusLabels) as [ItemStatus, string][]).map(([key, label]) => (
-                        <option key={key} value={key}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                {/* Aufwandsschaetzung */}
-                <div>
-                  <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">{t('itemDetail.estimateHours')}</label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.25"
-                    value={estimatedHours}
-                    onChange={(e) => setEstimatedHours(e.target.value)}
-                    placeholder={t('itemDetail.estimateHoursPlaceholder')}
-                    className={inputClass}
-                  />
-                </div>
-
-                {/* Titel */}
-                <div>
-                  <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">{t('itemDetail.titleRequired')}</label>
-                  <input
-                    type="text"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder={t('itemDetail.titlePlaceholder')}
-                    className={inputClass}
-                  />
-                </div>
-
-                {/* Beschreibung */}
-                <div>
-                  <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">{t('itemDetail.description')}</label>
-                  <textarea
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    rows={3}
-                    placeholder={t('itemDetail.descriptionPlaceholder')}
-                    className={`${inputClass} resize-none`}
-                  />
-                </div>
-
-                {/* URL */}
-                <div>
-                  <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">{t('itemDetail.url')}</label>
-                  <input
-                    type="url"
-                    value={url}
-                    onChange={(e) => setUrl(e.target.value)}
-                    placeholder="https://dev.azure.com/..."
-                    className={inputClass}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Notizen — always visible */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="block text-xs font-medium text-slate-500 dark:text-slate-400">{t('itemDetail.notes')}</label>
-              <button
-                type="button"
-                onClick={() => setNotesPreview(!notesPreview)}
-                className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-                title={notesPreview ? t('common.edit') : t('common.preview')}
-              >
-                {notesPreview ? (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                    <path d="m15 5 4 4" />
-                  </svg>
-                ) : (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" />
-                    <circle cx="12" cy="12" r="3" />
-                  </svg>
-                )}
-              </button>
-            </div>
-            {notesPreview ? (
-              <div className="min-h-[240px] border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 bg-white dark:bg-slate-800">
-                {notes.trim() ? (
-                  <MarkdownView content={notes} />
-                ) : (
-                  <p className="text-sm text-slate-400 dark:text-slate-500 italic">{t('common.noNotes')}</p>
-                )}
-              </div>
-            ) : (
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={16}
-                placeholder={t('itemDetail.notesPlaceholder')}
-                className={`${inputClass} resize-none`}
-              />
-            )}
-          </div>
+          <ItemDetailForm
+            projects={projects}
+            projectId={projectId}
+            onProjectIdChange={setProjectId}
+            itemNr={itemNr}
+            onItemNrChange={setItemNr}
+            title={title}
+            onTitleChange={setTitle}
+            description={description}
+            onDescriptionChange={setDescription}
+            status={status}
+            onStatusChange={setStatus}
+            estimatedHours={estimatedHours}
+            onEstimatedHoursChange={setEstimatedHours}
+            url={url}
+            onUrlChange={setUrl}
+            notes={notes}
+            onNotesChange={setNotes}
+            infoCollapsed={infoCollapsed}
+            onToggleInfoCollapsed={toggleInfoCollapsed}
+            notesPreview={notesPreview}
+            onToggleNotesPreview={() => setNotesPreview(!notesPreview)}
+            notesRows={16}
+            notesPreviewMinHeightClass="min-h-[240px]"
+          />
         </div>
 
-        {/* Actions */}
         <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between">
           <div>
-            {isEdit && (
-              confirmDelete ? (
+            {isEdit &&
+              (confirmDelete ? (
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-red-600">{t('itemDetail.confirmDelete')}</span>
                   <button
@@ -338,8 +172,7 @@ export default function ItemDetailModal({
                 >
                   {t('common.delete')}
                 </button>
-              )
-            )}
+              ))}
           </div>
           <div className="flex gap-2">
             <button
