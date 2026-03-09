@@ -2,52 +2,53 @@ import React from 'react'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import TimeCell from './TimeCell'
+import { GridProvider, type GridContextValue } from './GridContext'
 
 afterEach(() => {
   cleanup()
 })
 
 function renderCell() {
-  const onChange = vi.fn()
-  const onKeyDown = vi.fn()
-  const onFocus = vi.fn()
-  const onBlur = vi.fn()
+  const updateCell = vi.fn()
+  const markEditing = vi.fn()
+  const unmarkEditing = vi.fn()
+
+  const ctx: GridContextValue = {
+    registerCellRef: vi.fn(),
+    focusCell: vi.fn(),
+    updateCell,
+    markEditing,
+    unmarkEditing,
+  }
 
   render(
-    <TimeCell
-      value=""
-      onChange={onChange}
-      onKeyDown={onKeyDown}
-      inputRef={() => {}}
-      onFocus={onFocus}
-      onBlur={onBlur}
-    />
+    <GridProvider value={ctx}>
+      <TimeCell value="" rowKey="row-1" col={0} field="startTime" />
+    </GridProvider>
   )
 
   const input = screen.getByPlaceholderText('00:00')
-  return { input, onChange, onKeyDown }
+  return { input, updateCell }
 }
 
 describe('TimeCell', () => {
   it('blocks Enter navigation when input is invalid', () => {
-    const { input, onChange, onKeyDown } = renderCell()
+    const { input, updateCell } = renderCell()
 
     fireEvent.change(input, { target: { value: '99:99' } })
     const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })
     input.dispatchEvent(event)
 
     expect(event.defaultPrevented).toBe(true)
-    expect(onChange).not.toHaveBeenCalled()
-    expect(onKeyDown).not.toHaveBeenCalled()
+    expect(updateCell).not.toHaveBeenCalled()
   })
 
   it('normalizes valid compact input before Enter navigation', () => {
-    const { input, onChange, onKeyDown } = renderCell()
+    const { input, updateCell } = renderCell()
 
     fireEvent.change(input, { target: { value: '0900' } })
     fireEvent.keyDown(input, { key: 'Enter' })
 
-    expect(onChange).toHaveBeenCalledWith('09:00')
-    expect(onKeyDown).toHaveBeenCalledTimes(1)
+    expect(updateCell).toHaveBeenCalledWith('row-1', 'startTime', '09:00')
   })
 })

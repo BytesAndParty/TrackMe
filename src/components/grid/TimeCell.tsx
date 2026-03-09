@@ -1,27 +1,25 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { parseTimeInput } from '../../lib/parser'
+import { useGridContext } from './GridContext'
+import { type EditableField } from '../../hooks/useGridRows'
 
 interface TimeCellProps {
   value: string
-  onChange: (value: string) => void
-  onKeyDown: (e: React.KeyboardEvent) => void
-  inputRef: (el: HTMLInputElement | null) => void
-  onFocus: () => void
-  onBlur: () => void
+  rowKey: string
+  col: number
+  field: EditableField
 }
 
-export default function TimeCell({
-  value,
-  onChange,
-  onKeyDown,
-  inputRef,
-  onFocus,
-  onBlur,
-}: TimeCellProps) {
+export default function TimeCell({ value, rowKey, col, field }: TimeCellProps) {
+  const { registerCellRef, updateCell, markEditing, unmarkEditing } = useGridContext()
   const [rawInput, setRawInput] = useState<string | null>(null)
   const [invalid, setInvalid] = useState(false)
 
   const displayValue = rawInput !== null ? rawInput : value
+
+  const setRef = useCallback((el: HTMLInputElement | null) => {
+    registerCellRef(rowKey, col, el)
+  }, [registerCellRef, rowKey, col])
 
   function handleChange(raw: string) {
     setRawInput(raw)
@@ -32,7 +30,7 @@ export default function TimeCell({
     if (rawInput === null) return true
 
     if (rawInput.trim() === '') {
-      onChange('')
+      updateCell(rowKey, field, '')
       setInvalid(false)
       setRawInput(null)
       return true
@@ -40,7 +38,7 @@ export default function TimeCell({
 
     const parsed = parseTimeInput(rawInput)
     if (parsed) {
-      onChange(parsed)
+      updateCell(rowKey, field, parsed)
       setInvalid(false)
       setRawInput(null)
       return true
@@ -52,24 +50,25 @@ export default function TimeCell({
 
   function handleBlur() {
     commitRawInput()
-    onBlur()
+    unmarkEditing(rowKey)
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    // On Tab/Enter, format before navigation
     if (e.key === 'Tab' || e.key === 'Enter') {
       const ok = commitRawInput()
       if (!ok) {
         e.preventDefault()
+        e.stopPropagation()
         return
       }
+      // let event bubble to grid handler for navigation
     }
-    onKeyDown(e)
+    // all other keys: bubble to grid handler
   }
 
   return (
     <input
-      ref={inputRef}
+      ref={setRef}
       type="text"
       value={displayValue}
       onChange={(e) => handleChange(e.target.value)}
@@ -77,7 +76,7 @@ export default function TimeCell({
       onFocus={(e) => {
         e.target.select()
         setInvalid(false)
-        onFocus()
+        markEditing(rowKey)
       }}
       onBlur={handleBlur}
       placeholder="00:00"

@@ -1,11 +1,10 @@
-import { useEffect, useLayoutEffect, useRef } from 'react'
+import { useEffect, useRef, useMemo, useCallback } from 'react'
 import { type TimeEntry, type Project, type SubProject, type Item } from '../../db'
-import { useGridState, type GridRowData } from '../../hooks/useGridState'
+import { useGridState } from '../../hooks/useGridState'
 import { calculateDuration, formatDuration } from '../../lib/parser'
 import { useTranslation } from 'react-i18next'
-import TimeCell from './TimeCell'
-import AutocompleteCell from './AutocompleteCell'
-import TextCell from './TextCell'
+import { GridProvider, type GridContextValue } from './GridContext'
+import { GridRow } from './GridRow'
 
 const COLUMN_COUNT = 6
 
@@ -43,14 +42,14 @@ export default function EditableGrid({
     onCommitAllDirtyReady?.(commitAllDirty)
   }, [onCommitAllDirtyReady, commitAllDirty])
 
-  function setCellRef(row: number, col: number, el: HTMLInputElement | null) {
-    const key = `${row}-${col}`
+  function setCellRef(rowKey: string, col: number, el: HTMLInputElement | null) {
+    const key = `${rowKey}-${col}`
     if (el) cellRefs.current.set(key, el)
     else cellRefs.current.delete(key)
   }
 
-  function focusCell(row: number, col: number) {
-    const key = `${row}-${col}`
+  function focusCell(rowKey: string, col: number) {
+    const key = `${rowKey}-${col}`
     activeCellKey.current = key
     const el = cellRefs.current.get(key)
     if (el) {
@@ -67,121 +66,81 @@ export default function EditableGrid({
     }
   }
 
-  function handleCellKeyDown(e: React.KeyboardEvent, rowIndex: number, colIndex: number, rowKey: string) {
+  function focusCellAt(rowIndex: number, col: number) {
+    const row = rows[rowIndex]
+    if (row) focusCell(row._key, col)
+  }
+
+  // Event delegation: single keyboard handler on tbody
+  function handleGridKeyDown(e: React.KeyboardEvent) {
+    const td = (e.target as HTMLElement).closest('td[data-row-key]')
+    if (!td) return
+    const rowKey = (td as HTMLElement).dataset.rowKey!
+    const col = Number((td as HTMLElement).dataset.col)
+    const rowIndex = rows.findIndex(r => r._key === rowKey)
+    if (rowIndex < 0) return
+
     switch (e.key) {
       case 'Tab':
         if (e.shiftKey) {
-          if (colIndex > 0) {
-            e.preventDefault()
-            focusCell(rowIndex, colIndex - 1)
-          } else if (rowIndex > 0) {
-            e.preventDefault()
-            focusCell(rowIndex - 1, COLUMN_COUNT - 1)
-          }
+          if (col > 0) { e.preventDefault(); focusCell(rowKey, col - 1) }
+          else if (rowIndex > 0) { e.preventDefault(); focusCellAt(rowIndex - 1, COLUMN_COUNT - 1) }
         } else {
-          if (colIndex < COLUMN_COUNT - 1) {
-            e.preventDefault()
-            focusCell(rowIndex, colIndex + 1)
-          } else {
-            e.preventDefault()
-            void commitRow(rowKey)
-            focusCell(rowIndex + 1, 0)
-          }
+          if (col < COLUMN_COUNT - 1) { e.preventDefault(); focusCell(rowKey, col + 1) }
+          else { e.preventDefault(); void commitRow(rowKey); focusCellAt(rowIndex + 1, 0) }
         }
         break
 
       case 'Enter':
         e.preventDefault()
         void commitRow(rowKey)
-        focusCell(rowIndex + 1, 0)
+        focusCellAt(rowIndex + 1, 0)
         break
 
       case 'Escape':
-        ;(e.target as HTMLInputElement).blur()
+        (e.target as HTMLInputElement).blur()
         break
 
       case 'ArrowDown':
-        if (!e.altKey) {
-          e.preventDefault()
-          focusCell(rowIndex + 1, colIndex)
-        }
+        if (!e.altKey) { e.preventDefault(); focusCellAt(rowIndex + 1, col) }
         break
 
       case 'ArrowUp':
         e.preventDefault()
-        if (rowIndex > 0) {
-          focusCell(rowIndex - 1, colIndex)
-        }
+        if (rowIndex > 0) focusCellAt(rowIndex - 1, col)
         break
 
       case 'ArrowLeft': {
-        const input = e.currentTarget as HTMLInputElement
-        if (input.selectionStart === 0 && input.selectionStart === input.selectionEnd && colIndex > 0) {
+        const input = e.target as HTMLInputElement
+        if (input.selectionStart === 0 && input.selectionStart === input.selectionEnd && col > 0) {
           e.preventDefault()
-          focusCell(rowIndex, colIndex - 1)
+          focusCell(rowKey, col - 1)
         }
         break
       }
 
       case 'ArrowRight': {
-        const input = e.currentTarget as HTMLInputElement
-        if (input.selectionStart === input.value.length && input.selectionStart === input.selectionEnd && colIndex < COLUMN_COUNT - 1) {
+        const input = e.target as HTMLInputElement
+        if (input.selectionStart === input.value.length && input.selectionStart === input.selectionEnd && col < COLUMN_COUNT - 1) {
           e.preventDefault()
-          focusCell(rowIndex, colIndex + 1)
+          focusCell(rowKey, col + 1)
         }
         break
       }
 
       case 'Delete':
-        if (e.ctrlKey || e.metaKey) {
-          e.preventDefault()
-          void deleteRow(rowKey)
-        }
+        if (e.ctrlKey || e.metaKey) { e.preventDefault(); void deleteRow(rowKey) }
         break
     }
   }
 
-  function handleCellFocus(rowIndex: number, colIndex: number, rowKey: string) {
-    activeCellKey.current = `${rowIndex}-${colIndex}`
-    markEditing(rowKey)
-  }
-
-  function handleRowBlur(rowKey: string) {
-    unmarkEditing(rowKey)
-    // Clear active cell if focus leaves the grid entirely
-    requestAnimationFrame(() => {
-      const key = activeCellKey.current
-      if (key) {
-        const el = cellRefs.current.get(key)
-        if (!el || document.activeElement !== el) {
-          // Check if focus moved to another grid cell
-          const isInGrid = Array.from(cellRefs.current.values()).some(
-            (cell) => cell === document.activeElement,
-          )
-          if (!isInGrid) {
-            activeCellKey.current = null
-          }
-        }
-      }
-    })
-  }
-
-  // Restore focus if it was lost from a grid cell after a re-render (e.g. DB sync)
-  useLayoutEffect(() => {
-    const key = activeCellKey.current
-    if (!key) return
-    const el = cellRefs.current.get(key)
-    if (el && document.activeElement !== el && document.activeElement === document.body) {
-      el.focus()
-    }
-  }, [rows])
-
-  function computeDuration(row: GridRowData): string {
-    if (!row.startTime || !row.endTime) return '–'
-    const mins = calculateDuration(row.startTime, row.endTime)
-    if (mins <= 0) return '–'
-    return formatDuration(mins)
-  }
+  const gridContext: GridContextValue = useMemo(() => ({
+    registerCellRef: setCellRef,
+    focusCell,
+    updateCell,
+    markEditing,
+    unmarkEditing,
+  }), [updateCell, markEditing, unmarkEditing])
 
   const totalMinutes = rows
     .filter((r) => r.startTime && r.endTime)
@@ -190,7 +149,7 @@ export default function EditableGrid({
       return sum + (d > 0 ? d : 0)
     }, 0)
 
-  // Non-blocking overlap detection: show hints only, never auto-adjust or block saving
+  // Non-blocking overlap detection
   const conflictRows = new Set<number>()
   const validRows = rows
     .map((r, i) => ({ index: i, start: r.startTime, end: r.endTime }))
@@ -200,7 +159,6 @@ export default function EditableGrid({
     for (let j = i + 1; j < validRows.length; j++) {
       const a = validRows[i]
       const b = validRows[j]
-      // Overlap: a.start < b.end AND b.start < a.end
       if (a.start < b.end && b.start < a.end) {
         conflictRows.add(a.index)
         conflictRows.add(b.index)
@@ -213,15 +171,15 @@ export default function EditableGrid({
     .filter((p) => p.active)
     .map((p) => ({ key: p.key, name: p.name, id: p.id! }))
 
-  function getSubProjectSuggestions(projectKey: string) {
+  const getSubProjectSuggestions = useCallback((projectKey: string) => {
     const project = projects.find((p) => p.key.toLowerCase() === projectKey.toLowerCase())
     if (!project) return []
     return subProjects
       .filter((s) => s.projectId === project.id)
       .map((s) => ({ key: s.key, name: s.name, id: s.id! }))
-  }
+  }, [projects, subProjects])
 
-  function getItemSuggestions(projectKey: string, subProjectKey: string) {
+  const getItemSuggestions = useCallback((projectKey: string, subProjectKey: string) => {
     if (!projectKey) {
       return items.map((item) => ({ key: item.itemNr, name: item.title, id: item.id! }))
     }
@@ -235,7 +193,6 @@ export default function EditableGrid({
       return projectItems.map((item) => ({ key: item.itemNr, name: item.title, id: item.id! }))
     }
 
-    // Find subproject and filter items by entries that match both project + subproject
     const subProject = subProjects.find(
       (s) => s.projectId === project.id && s.key.toLowerCase() === subProjectKey.toLowerCase()
     )
@@ -243,34 +200,47 @@ export default function EditableGrid({
       return projectItems.map((item) => ({ key: item.itemNr, name: item.title, id: item.id! }))
     }
 
-    // Get itemNrs that have entries with this subproject
     const subProjectItemNrs = new Set(
       entries
         .filter((e) => e.projectId === project.id && e.subProjectId === subProject.id && e.itemNr)
         .map((e) => e.itemNr)
     )
 
-    // Items matching subproject first, then remaining project items
     const matching = projectItems.filter((item) => subProjectItemNrs.has(item.itemNr))
     const rest = projectItems.filter((item) => !subProjectItemNrs.has(item.itemNr))
     return [...matching, ...rest].map((item) => ({ key: item.itemNr, name: item.title, id: item.id! }))
-  }
+  }, [items, projects, subProjects, entries])
 
-  function findItem(itemNr: string, projectKey: string): Item | undefined {
+  const findItem = useCallback((itemNr: string, projectKey: string): Item | undefined => {
     if (!itemNr.trim()) return undefined
     const project = projects.find((p) => p.key.toLowerCase() === projectKey.toLowerCase())
     if (project) {
       return items.find((i) => i.projectId === project.id && i.itemNr === itemNr.trim())
     }
     return items.find((i) => i.itemNr === itemNr.trim())
-  }
+  }, [items, projects])
 
-  function buildItemUrl(itemNr: string, projectKey: string): string | null {
+  const buildItemUrl = useCallback((itemNr: string, projectKey: string): string | null => {
     if (!itemNr.trim()) return null
     const project = projects.find((p) => p.key.toLowerCase() === projectKey.toLowerCase())
     if (!project?.linkTemplate) return null
     return project.linkTemplate.replace('{itemNr}', itemNr.trim())
-  }
+  }, [projects])
+
+  const handleProjectChange = useCallback((rowKey: string, value: string, currentSubProject: string) => {
+    updateCell(rowKey, 'project', value)
+    const currentProject = projects.find(
+      (p) => p.key.toLowerCase() === value.toLowerCase()
+    )
+    const currentSub = subProjects.find(
+      (s) =>
+        s.projectId === currentProject?.id &&
+        s.key.toLowerCase() === currentSubProject.toLowerCase()
+    )
+    if (!currentSub && currentSubProject) {
+      updateCell(rowKey, 'subProject', '')
+    }
+  }, [updateCell, projects, subProjects])
 
   return (
     <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-x-clip overflow-y-visible">
@@ -292,191 +262,31 @@ export default function EditableGrid({
             <th className="w-10 py-2.5"></th>
           </tr>
         </thead>
-        <tbody>
-          {rows.map((row, rowIndex) => {
-            const isEmptyNew = row._isNew && !row._dirty
-            const hasConflict = conflictRows.has(rowIndex)
-            return (
-                <tr
-                  key={row._key}
-                  className={`group border-b transition-colors ${
-                    hasConflict
-                      ? 'border-amber-200 dark:border-amber-900/40 bg-amber-50/40 dark:bg-amber-900/10'
-                      : 'border-slate-50 dark:border-slate-800'
-                  } ${isEmptyNew ? 'opacity-50' : ''}`}
-                  title={hasConflict ? t('grid.overlapTitle') : undefined}
-                >
-                {/* Start */}
-                <td className="grid-cell">
-                  <TimeCell
-                    value={row.startTime}
-                    onChange={(v) => updateCell(row._key, 'startTime', v)}
-                    onKeyDown={(e) => handleCellKeyDown(e, rowIndex, 0, row._key)}
-                    inputRef={(el) => setCellRef(rowIndex, 0, el)}
-                    onFocus={() => handleCellFocus(rowIndex, 0, row._key)}
-                    onBlur={() => handleRowBlur(row._key)}
-                  />
-                </td>
-
-                {/* Ende */}
-                <td className="grid-cell">
-                  <TimeCell
-                    value={row.endTime}
-                    onChange={(v) => updateCell(row._key, 'endTime', v)}
-                    onKeyDown={(e) => handleCellKeyDown(e, rowIndex, 1, row._key)}
-                    inputRef={(el) => setCellRef(rowIndex, 1, el)}
-                    onFocus={() => handleCellFocus(rowIndex, 1, row._key)}
-                    onBlur={() => handleRowBlur(row._key)}
-                  />
-                </td>
-
-                {/* Projekt */}
-                <td className="grid-cell">
-                  <AutocompleteCell
-                    value={row.project}
-                    suggestions={projectSuggestions}
-                    onChange={(v) => {
-                      updateCell(row._key, 'project', v)
-                      // Clear subproject if project changes
-                      const currentProject = projects.find(
-                        (p) => p.key.toLowerCase() === v.toLowerCase()
-                      )
-                      const currentSub = subProjects.find(
-                        (s) =>
-                          s.projectId === currentProject?.id &&
-                          s.key.toLowerCase() === row.subProject.toLowerCase()
-                      )
-                      if (!currentSub && row.subProject) {
-                        updateCell(row._key, 'subProject', '')
-                      }
-                    }}
-                    onKeyDown={(e) => handleCellKeyDown(e, rowIndex, 2, row._key)}
-                    inputRef={(el) => setCellRef(rowIndex, 2, el)}
-                    onFocus={() => handleCellFocus(rowIndex, 2, row._key)}
-                    onBlur={() => handleRowBlur(row._key)}
-                  />
-                </td>
-
-                {/* Unterprojekt */}
-                <td className="grid-cell">
-                  <AutocompleteCell
-                    value={row.subProject}
-                    suggestions={getSubProjectSuggestions(row.project)}
-                    onChange={(v) => updateCell(row._key, 'subProject', v)}
-                    onKeyDown={(e) => handleCellKeyDown(e, rowIndex, 3, row._key)}
-                    inputRef={(el) => setCellRef(rowIndex, 3, el)}
-                    onFocus={() => handleCellFocus(rowIndex, 3, row._key)}
-                    onBlur={() => handleRowBlur(row._key)}
-                  />
-                </td>
-
-                {/* Item Nr */}
-                <td className="grid-cell">
-                  <div className="flex items-center">
-                    <div className="flex-1">
-                      <AutocompleteCell
-                        value={row.itemNr}
-                        suggestions={getItemSuggestions(row.project, row.subProject)}
-                        onChange={(v) => updateCell(row._key, 'itemNr', v)}
-                        onKeyDown={(e) => handleCellKeyDown(e, rowIndex, 4, row._key)}
-                        inputRef={(el) => setCellRef(rowIndex, 4, el)}
-                        onFocus={() => handleCellFocus(rowIndex, 4, row._key)}
-                        onBlur={() => handleRowBlur(row._key)}
-                      />
-                    </div>
-                    {(() => {
-                      const itemUrl = buildItemUrl(row.itemNr, row.project)
-                      const item = findItem(row.itemNr, row.project)
-                      return (
-                        <>
-                          {itemUrl && (
-                            <a
-                              href={itemUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="opacity-0 group-hover:opacity-100 p-1 text-slate-300 dark:text-slate-600 hover:text-blue-600 dark:hover:text-blue-400 transition-all shrink-0"
-                              tabIndex={-1}
-                              title={t('grid.openInAzure')}
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
-                                <polyline points="15 3 21 3 21 9" />
-                                <line x1="10" y1="14" x2="21" y2="3" />
-                              </svg>
-                            </a>
-                          )}
-                          {item && onItemClick && !itemUrl && (
-                            <button
-                              type="button"
-                              onClick={() => onItemClick(item)}
-                              className="opacity-0 group-hover:opacity-100 p-1 text-slate-300 dark:text-slate-600 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all shrink-0"
-                              tabIndex={-1}
-                              title={t('grid.openItem')}
-                            >
-                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
-                                <polyline points="15 3 21 3 21 9" />
-                                <line x1="10" y1="14" x2="21" y2="3" />
-                              </svg>
-                            </button>
-                          )}
-                        </>
-                      )
-                    })()}
-                  </div>
-                </td>
-
-                {/* Kommentar */}
-                <td className="grid-cell">
-                  <TextCell
-                    value={row.taskText}
-                    onChange={(v) => updateCell(row._key, 'taskText', v)}
-                    onKeyDown={(e) => handleCellKeyDown(e, rowIndex, 5, row._key)}
-                    inputRef={(el) => setCellRef(rowIndex, 5, el)}
-                    onFocus={() => handleCellFocus(rowIndex, 5, row._key)}
-                    onBlur={() => handleRowBlur(row._key)}
-                    placeholder={t('grid.descriptionPlaceholder')}
-                  />
-                </td>
-
-                {/* Duration (read-only) */}
-                <td className="px-3 py-2 text-right">
-                  <span className={`text-sm tabular-nums ${hasConflict ? 'text-amber-700 dark:text-amber-300 font-medium' : 'text-slate-500 dark:text-slate-400'}`}>
-                    {computeDuration(row)}
-                  </span>
-                  {hasConflict && (
-                    <div className="text-[10px] leading-3 mt-0.5 text-amber-700 dark:text-amber-300">
-                      {t('grid.hint')}
-                    </div>
-                  )}
-                </td>
-
-                {/* Delete */}
-                <td className="px-1 py-2">
-                  {row._id && (
-                    <button
-                      type="button"
-                      onClick={() => void deleteRow(row._key)}
-                      className="opacity-0 group-hover:opacity-100 p-1 text-slate-300 dark:text-slate-600 hover:text-red-500 transition-all rounded"
-                      tabIndex={-1}
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                      </svg>
-                    </button>
-                  )}
-                </td>
-              </tr>
-            )
-          })}
-        </tbody>
+        <GridProvider value={gridContext}>
+          <tbody onKeyDown={handleGridKeyDown}>
+            {rows.map((row, i) => (
+              <GridRow
+                key={row._key}
+                row={row}
+                hasConflict={conflictRows.has(i)}
+                projectSuggestions={projectSuggestions}
+                getSubProjectSuggestions={getSubProjectSuggestions}
+                getItemSuggestions={getItemSuggestions}
+                buildItemUrl={buildItemUrl}
+                findItem={findItem}
+                onItemClick={onItemClick}
+                onDeleteRow={deleteRow}
+                onProjectChange={handleProjectChange}
+              />
+            ))}
+          </tbody>
+        </GridProvider>
         <tfoot>
           <tr className="border-t border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
             <td colSpan={6} className="px-2 py-2.5">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{t('common.total')}</span>
-                
+
                 {/* Save Status Indicator */}
                 <div className="flex items-center gap-2 mr-4">
                   {saveStatus === 'saving' && (

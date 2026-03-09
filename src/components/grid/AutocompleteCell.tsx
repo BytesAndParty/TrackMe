@@ -1,4 +1,6 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { useGridContext } from './GridContext'
+import { type EditableField } from '../../hooks/useGridRows'
 
 export interface Suggestion {
   key: string
@@ -9,25 +11,38 @@ export interface Suggestion {
 interface AutocompleteCellProps {
   value: string
   suggestions: Suggestion[]
-  onChange: (value: string) => void
-  onKeyDown: (e: React.KeyboardEvent) => void
-  inputRef: (el: HTMLInputElement | null) => void
-  onFocus: () => void
-  onBlur: () => void
+  rowKey: string
+  col: number
+  field: EditableField
+  onProjectChange?: (rowKey: string, value: string, currentSubProject: string) => void
+  currentSubProject?: string
 }
 
 export default function AutocompleteCell({
   value,
   suggestions,
-  onChange,
-  onKeyDown,
-  inputRef,
-  onFocus,
-  onBlur,
+  rowKey,
+  col,
+  field,
+  onProjectChange,
+  currentSubProject,
 }: AutocompleteCellProps) {
+  const { registerCellRef, updateCell, markEditing, unmarkEditing } = useGridContext()
   const [open, setOpen] = useState(false)
   const [highlightIndex, setHighlightIndex] = useState(0)
   const dropdownRef = useRef<HTMLDivElement>(null)
+
+  const setRef = useCallback((el: HTMLInputElement | null) => {
+    registerCellRef(rowKey, col, el)
+  }, [registerCellRef, rowKey, col])
+
+  function onChange(v: string) {
+    if (onProjectChange) {
+      onProjectChange(rowKey, v, currentSubProject ?? '')
+    } else {
+      updateCell(rowKey, field, v)
+    }
+  }
 
   const filtered = value
     ? suggestions
@@ -67,6 +82,7 @@ export default function AutocompleteCell({
         if (!exactMatch) {
           // Partial match: auto-complete to top suggestion, stay in field
           e.preventDefault()
+          e.stopPropagation()
           const idx = Math.min(highlightIndex, filtered.length - 1)
           onChange(filtered[idx].key)
           setOpen(false)
@@ -76,46 +92,50 @@ export default function AutocompleteCell({
         onChange(exactMatch.key)
       }
       setOpen(false)
-      onKeyDown(e)
+      // let bubble to grid for Tab navigation
       return
     }
 
     if (open && filtered.length > 0) {
       if (e.key === 'ArrowDown') {
         e.preventDefault()
+        e.stopPropagation()
         setHighlightIndex((i) => Math.min(i + 1, filtered.length - 1))
         return
       }
       if (e.key === 'ArrowUp') {
         e.preventDefault()
+        e.stopPropagation()
         setHighlightIndex((i) => Math.max(i - 1, 0))
         return
       }
       if (e.key === 'Enter') {
         e.preventDefault()
+        e.stopPropagation()
         selectItem(filtered[highlightIndex])
         return
       }
       if (e.key === 'Escape') {
+        e.stopPropagation()
         setOpen(false)
         return
       }
     }
-    onKeyDown(e)
+    // all other keys: bubble to grid handler
   }
 
   function handleBlur() {
     // Delay to allow click on dropdown items
     setTimeout(() => {
       setOpen(false)
-      onBlur()
+      unmarkEditing(rowKey)
     }, 150)
   }
 
   return (
     <div className="relative">
       <input
-        ref={inputRef}
+        ref={setRef}
         type="text"
         value={value}
         onChange={(e) => {
@@ -126,7 +146,7 @@ export default function AutocompleteCell({
         onFocus={(e) => {
           e.target.select()
           setOpen(true)
-          onFocus()
+          markEditing(rowKey)
         }}
         onBlur={handleBlur}
         placeholder="–"
