@@ -14,7 +14,7 @@ export function useGridState(
   subProjects: SubProject[]
 ) {
   const { editingRows, markEditing, unmarkEditing } = useGridEditing()
-  const { rows, rowsRef, updateRows } = useGridRows(date, dbEntries, projects, subProjects, editingRows)
+  const { rows, rowsRef, updateRows } = useGridRows(dbEntries, projects, subProjects, editingRows)
   const { commitRow, commitAllDirty, deleteRow } = useGridPersist(date, projects, subProjects, rowsRef, updateRows, editingRows)
   const { saveStatus, setSaveStatus, triggerDebouncedSave } = useAutoSave(commitAllDirty, rowsRef)
 

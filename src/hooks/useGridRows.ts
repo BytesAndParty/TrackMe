@@ -104,7 +104,6 @@ export function dedupeRowsById(rows: GridRowData[]): GridRowData[] {
 }
 
 export function useGridRows(
-  date: string,
   dbEntries: TimeEntry[],
   projects: Project[],
   subProjects: SubProject[],
