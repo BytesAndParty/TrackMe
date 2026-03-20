@@ -60,6 +60,9 @@ const resources = {
         nextRow: 'Nächste Zeile',
         cancel: 'Abbrechen',
         timeInput: 'Zeiteingabe',
+        navDay: 'Tag wechseln',
+        undoDelete: 'Rückgängig',
+        rowDeleted: 'Eintrag gelöscht.',
       },
       weekView: {
         title: 'Wochenansicht',
@@ -290,6 +293,9 @@ const resources = {
         nextRow: 'Next row',
         cancel: 'Cancel',
         timeInput: 'Time input',
+        navDay: 'Switch day',
+        undoDelete: 'Undo',
+        rowDeleted: 'Entry deleted.',
       },
       weekView: {
         title: 'Week view',

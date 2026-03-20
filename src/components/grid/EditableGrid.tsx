@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo, useCallback } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { type TimeEntry, type Project, type SubProject, type Item } from '../../db'
 import { useGridState } from '../../hooks/useGridState'
 import { calculateDuration, formatDuration } from '../../lib/parser'
@@ -28,12 +28,30 @@ export default function EditableGrid({
   onCommitAllDirtyReady,
 }: EditableGridProps) {
   const { t } = useTranslation()
-  const { rows, updateCell, commitRow, commitAllDirty, deleteRow, markEditing, unmarkEditing, saveStatus } = useGridState(
+  const { rows, updateCell, commitRow, commitAllDirty, deleteRow, undoDelete, markEditing, unmarkEditing, saveStatus } = useGridState(
     date,
     entries,
     projects,
     subProjects
   )
+
+  const [showUndoToast, setShowUndoToast] = useState(false)
+  const undoToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function handleDeleteRow(rowKey: string) {
+    deleteRow(rowKey)
+    // Show undo toast
+    if (undoToastTimerRef.current) clearTimeout(undoToastTimerRef.current)
+    setShowUndoToast(true)
+    undoToastTimerRef.current = setTimeout(() => setShowUndoToast(false), 5000)
+  }
+
+  function handleUndo() {
+    if (undoDelete()) {
+      setShowUndoToast(false)
+      if (undoToastTimerRef.current) clearTimeout(undoToastTimerRef.current)
+    }
+  }
 
   const cellRefs = useRef<Map<string, HTMLInputElement>>(new Map())
   const activeCellKey = useRef<string | null>(null)
@@ -129,7 +147,7 @@ export default function EditableGrid({
       }
 
       case 'Delete':
-        if (e.ctrlKey || e.metaKey) { e.preventDefault(); void deleteRow(rowKey) }
+        if (e.ctrlKey || e.metaKey) { e.preventDefault(); handleDeleteRow(rowKey) }
         break
     }
   }
@@ -275,7 +293,7 @@ export default function EditableGrid({
                 buildItemUrl={buildItemUrl}
                 findItem={findItem}
                 onItemClick={onItemClick}
-                onDeleteRow={deleteRow}
+                onDeleteRow={handleDeleteRow}
                 onProjectChange={handleProjectChange}
               />
             ))}
@@ -323,6 +341,20 @@ export default function EditableGrid({
           </tr>
         </tfoot>
       </table>
+
+      {/* Undo delete toast */}
+      {showUndoToast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-slate-800 dark:bg-slate-700 text-white text-sm px-4 py-2.5 rounded-lg shadow-lg animate-[fadeIn_150ms_ease-out]">
+          <span>{t('dayView.rowDeleted')}</span>
+          <button
+            type="button"
+            onClick={handleUndo}
+            className="font-semibold text-blue-300 hover:text-blue-200 transition-colors"
+          >
+            {t('dayView.undoDelete')}
+          </button>
+        </div>
+      )}
     </div>
   )
 }

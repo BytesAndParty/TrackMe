@@ -30,6 +30,7 @@ export default function AutocompleteCell({
   const { registerCellRef, updateCell, markEditing, unmarkEditing } = useGridContext()
   const [open, setOpen] = useState(false)
   const [highlightIndex, setHighlightIndex] = useState(0)
+  const containerRef = useRef<HTMLDivElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   const setRef = useCallback((el: HTMLInputElement | null) => {
@@ -124,16 +125,15 @@ export default function AutocompleteCell({
     // all other keys: bubble to grid handler
   }
 
-  function handleBlur() {
-    // Delay to allow click on dropdown items
-    setTimeout(() => {
-      setOpen(false)
-      unmarkEditing(rowKey)
-    }, 150)
+  function handleBlur(e: React.FocusEvent) {
+    // If focus moves within our container (e.g., to a dropdown button), keep open
+    if (containerRef.current?.contains(e.relatedTarget as Node)) return
+    setOpen(false)
+    unmarkEditing(rowKey)
   }
 
   return (
-    <div className="relative">
+    <div ref={containerRef} className="relative">
       <input
         ref={setRef}
         type="text"

@@ -49,7 +49,9 @@ export const GridRow = React.memo(function GridRow({
         hasConflict
           ? 'border-amber-200 dark:border-amber-900/40 bg-amber-50/40 dark:bg-amber-900/10'
           : 'border-slate-50 dark:border-slate-800'
-      } ${isEmptyNew ? 'opacity-50' : ''}`}
+      } ${isEmptyNew ? 'opacity-50' : ''} ${
+        row._dirty && !isEmptyNew ? 'border-l-2 border-l-blue-400 dark:border-l-blue-500' : ''
+      }`}
       title={hasConflict ? t('grid.overlapTitle') : undefined}
     >
       {/* Start */}
