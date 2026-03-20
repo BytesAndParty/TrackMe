@@ -127,8 +127,10 @@ export default function DayView() {
 
 				const taskText = entry.taskText.trim();
 				const notes = entry.notes.trim();
-				if (taskText) byItem.get(itemKey)!.texts.add(taskText);
-				if (notes && notes !== taskText)
+				// Skip taskText if it duplicates the item title
+				if (taskText && taskText !== itemTitle)
+					byItem.get(itemKey)!.texts.add(taskText);
+				if (notes && notes !== taskText && notes !== itemTitle)
 					byItem.get(itemKey)!.texts.add(notes);
 			}
 
@@ -167,6 +169,30 @@ export default function DayView() {
 		},
 		[]
 	);
+
+	// Keyboard shortcuts for date navigation
+	useEffect(() => {
+		function handleKeyDown(e: KeyboardEvent) {
+			if (!e.altKey) return;
+			switch (e.key) {
+				case "t":
+				case "T":
+					e.preventDefault();
+					void changeDate(todayISO());
+					break;
+				case "ArrowLeft":
+					e.preventDefault();
+					void navigateDay(-1);
+					break;
+				case "ArrowRight":
+					e.preventDefault();
+					void navigateDay(1);
+					break;
+			}
+		}
+		window.addEventListener("keydown", handleKeyDown);
+		return () => window.removeEventListener("keydown", handleKeyDown);
+	});
 
 	async function changeDate(nextDate: string) {
 		if (nextDate === selectedDate || isNavigatingDate) return;
@@ -351,7 +377,7 @@ export default function DayView() {
 			)}
 
 			{/* Keyboard hint */}
-			<div className="flex items-center gap-4 text-[11px] text-slate-400 dark:text-slate-500">
+			<div className="flex flex-wrap items-center gap-4 text-[11px] text-slate-400 dark:text-slate-500">
 				<span>
 					<kbd className="px-1 py-0.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-[10px]">
 						Tab
@@ -369,6 +395,18 @@ export default function DayView() {
 						Esc
 					</kbd>{" "}
 					{t("dayView.cancel")}
+				</span>
+				<span>
+					<kbd className="px-1 py-0.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-[10px]">
+						Alt+←/→
+					</kbd>{" "}
+					{t("dayView.navDay", { defaultValue: "Tag wechseln" })}
+				</span>
+				<span>
+					<kbd className="px-1 py-0.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-[10px]">
+						Alt+T
+					</kbd>{" "}
+					{t("dayView.today")}
 				</span>
 				<span>
 					{t("dayView.timeInput")}:{" "}
