@@ -6,6 +6,8 @@ export interface GridRowData {
   _key: string
   _dirty: boolean
   _isNew: boolean
+  _pendingCommit?: boolean
+  _notes: string
   startTime: string
   endTime: string
   project: string
@@ -26,6 +28,7 @@ export function createEmptyRow(): GridRowData {
     _key: nextRowKey(),
     _dirty: false,
     _isNew: true,
+    _notes: '',
     startTime: '',
     endTime: '',
     project: '',
@@ -41,6 +44,7 @@ export function entryToRow(entry: TimeEntry, projects: Project[], subProjects: S
     _key: existingKey ?? nextRowKey(),
     _dirty: false,
     _isNew: false,
+    _notes: entry.notes ?? '',
     startTime: entry.startTime,
     endTime: entry.endTime,
     project: projects.find((p) => p.id === entry.projectId)?.key ?? '',
@@ -145,6 +149,18 @@ export function useGridRows(
         return entryToRow(entry, projects, subProjects, existing._key)
       }
 
+      // Adopt pending-commit rows first (they are being saved right now)
+      const pendingRow = prev.find(
+        (r) =>
+          !r._id &&
+          r._pendingCommit &&
+          !matchedUnsavedKeys.has(r._key)
+      )
+      if (pendingRow) {
+        matchedUnsavedKeys.add(pendingRow._key)
+        return { ...pendingRow, _id: entry.id, _isNew: false, _pendingCommit: false, _notes: entry.notes ?? '' }
+      }
+
       const matchingUnsaved = prev.find(
         (r) =>
           !r._id &&
@@ -153,7 +169,7 @@ export function useGridRows(
       )
       if (matchingUnsaved) {
         matchedUnsavedKeys.add(matchingUnsaved._key)
-        return { ...matchingUnsaved, _id: entry.id, _isNew: false }
+        return { ...matchingUnsaved, _id: entry.id, _isNew: false, _notes: entry.notes ?? '' }
       }
 
       return entryToRow(entry, projects, subProjects)

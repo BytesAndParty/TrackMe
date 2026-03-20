@@ -15,8 +15,8 @@ export function useGridState(
 ) {
   const { editingRows, markEditing, unmarkEditing } = useGridEditing()
   const { rows, rowsRef, updateRows } = useGridRows(dbEntries, projects, subProjects, editingRows)
-  const { commitRow, commitAllDirty, deleteRow } = useGridPersist(date, projects, subProjects, rowsRef, updateRows, editingRows)
-  const { saveStatus, setSaveStatus, triggerDebouncedSave } = useAutoSave(commitAllDirty, rowsRef)
+  const { commitRow, commitAllDirty, deleteRow, undoDelete } = useGridPersist(date, projects, subProjects, rowsRef, updateRows, editingRows)
+  const { saveStatus, setSaveStatus, triggerDebouncedSave, cancelDebouncedSave } = useAutoSave(commitAllDirty, rowsRef)
 
   function updateCell(rowKey: string, field: EditableField, value: string) {
     updateRows((prev) => {
@@ -44,12 +44,19 @@ export function useGridState(
     triggerDebouncedSave()
   }
 
+  /** Cancel pending debounce, then commit all dirty rows. Use for navigation/unmount. */
+  function flushAndCommitAll(): Promise<boolean> {
+    cancelDebouncedSave()
+    return commitAllDirty(setSaveStatus)
+  }
+
   return {
     rows,
     updateCell,
     commitRow,
-    commitAllDirty: () => commitAllDirty(setSaveStatus),
+    commitAllDirty: flushAndCommitAll,
     deleteRow,
+    undoDelete,
     markEditing,
     unmarkEditing,
     saveStatus,

@@ -35,6 +35,7 @@ vi.mock('../../db', () => ({
       where: mocks.itemsWhere,
       add: mocks.itemsAdd,
     },
+    transaction: async (_mode: string, _tables: unknown[], cb: () => Promise<void>) => cb(),
   },
 }))
 

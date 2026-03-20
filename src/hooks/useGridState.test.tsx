@@ -17,6 +17,11 @@ const mocks = vi.hoisted(() => {
   }))
   const itemsAdd = vi.fn(async () => 99)
 
+  // Transaction mock: executes the callback immediately
+  const transaction = vi.fn(async (_mode: string, _tables: unknown[], cb: () => Promise<void>) => {
+    await cb()
+  })
+
   return {
     timeEntriesAdd,
     timeEntriesUpdate,
@@ -25,6 +30,7 @@ const mocks = vi.hoisted(() => {
     itemsAdd,
     itemsFirst,
     todoItemsToArray,
+    transaction,
   }
 })
 
@@ -39,6 +45,7 @@ vi.mock('../db', () => ({
       where: mocks.itemsWhere,
       add: mocks.itemsAdd,
     },
+    transaction: mocks.transaction,
   },
 }))
 
@@ -137,7 +144,7 @@ describe('useGridState', () => {
       })
 
       await act(async () => {
-        vi.advanceTimersByTime(2000)
+        vi.advanceTimersByTime(500)
         await Promise.resolve()
       })
 

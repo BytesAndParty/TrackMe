@@ -14,7 +14,7 @@ export function useAutoSave(
     void commitAllDirty(setSaveStatus)
   }, [commitAllDirty])
 
-  const { debounced: triggerDebouncedSave, cancel: cancelDebouncedSave } = useDebouncedCallback(doCommit, 2000)
+  const { debounced: triggerDebouncedSave, cancel: cancelDebouncedSave } = useDebouncedCallback(doCommit, 500)
 
   // Save on unmount
   useEffect(() => {
@@ -24,11 +24,24 @@ export function useAutoSave(
     }
   }, [cancelDebouncedSave, commitAllDirty])
 
-  // Handle browser close/refresh
+  // Save when tab becomes hidden (fires reliably before browser freezes the page)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        cancelDebouncedSave()
+        void commitAllDirty(setSaveStatus)
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [cancelDebouncedSave, commitAllDirty])
+
+  // Handle browser close/refresh (last-resort safety net)
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       const hasDirty = rowsRef.current.some(r => r._dirty && r.startTime)
       if (hasDirty) {
+        cancelDebouncedSave()
         void commitAllDirty(setSaveStatus)
         e.preventDefault()
         e.returnValue = ''
@@ -36,7 +49,7 @@ export function useAutoSave(
     }
     window.addEventListener('beforeunload', handleBeforeUnload)
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
-  }, [commitAllDirty, rowsRef])
+  }, [cancelDebouncedSave, commitAllDirty, rowsRef])
 
   return { saveStatus, setSaveStatus, triggerDebouncedSave, cancelDebouncedSave }
 }
