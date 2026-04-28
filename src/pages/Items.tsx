@@ -39,6 +39,10 @@ export default function Items() {
     done: items.filter((i) => i.status === 'done'),
   }
 
+  async function handleDelete(itemId: number) {
+    await db.items.delete(itemId)
+  }
+
   async function handleDrop(itemId: number, newStatus: ItemStatus) {
     const targetItems = columns[newStatus]
     const newSortOrder =
@@ -92,6 +96,7 @@ export default function Items() {
           projects={projects}
           onCardClick={(item) => navigate(`/items/${item.id}`)}
           onDrop={handleDrop}
+          onDelete={handleDelete}
           onAddItem={(status) => setCreatingWithStatus(status)}
           itemTimeMap={itemTimeMap}
         />

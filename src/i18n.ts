@@ -188,6 +188,7 @@ const resources = {
         remaining: '{{duration}} übrig',
         over: '{{duration}} drüber',
         planned: 'geplant {{duration}}',
+        trash: 'Item löschen',
       },
       welcome: {
         title: 'Willkommen bei TrackMe!',
@@ -421,6 +422,7 @@ const resources = {
         remaining: '{{duration}} left',
         over: '{{duration}} over',
         planned: 'planned {{duration}}',
+        trash: 'Delete item',
       },
       welcome: {
         title: 'Welcome to TrackMe!',
