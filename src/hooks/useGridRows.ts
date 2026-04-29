@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, type RefObject } from 'react'
-import { type TimeEntry, type Project, type SubProject } from '../db'
+import { type TimeEntry, type Project, type SubProject, type Item } from '../db'
 
 export interface GridRowData {
   _id?: number
@@ -13,10 +13,11 @@ export interface GridRowData {
   project: string
   subProject: string
   itemNr: string
+  itemTitle: string
   taskText: string
 }
 
-export type EditableField = 'startTime' | 'endTime' | 'project' | 'subProject' | 'itemNr' | 'taskText'
+export type EditableField = 'startTime' | 'endTime' | 'project' | 'subProject' | 'itemNr' | 'itemTitle' | 'taskText'
 
 let _rowKeyCounter = 0
 function nextRowKey(): string {
@@ -34,11 +35,15 @@ export function createEmptyRow(): GridRowData {
     project: '',
     subProject: '',
     itemNr: '',
+    itemTitle: '',
     taskText: '',
   }
 }
 
-export function entryToRow(entry: TimeEntry, projects: Project[], subProjects: SubProject[], existingKey?: string): GridRowData {
+export function entryToRow(entry: TimeEntry, projects: Project[], subProjects: SubProject[], items: Item[], existingKey?: string): GridRowData {
+  const project = projects.find((p) => p.id === entry.projectId)
+  const item = project && entry.itemNr ? items.find((i) => i.projectId === project.id && i.itemNr === entry.itemNr) : undefined
+
   return {
     _id: entry.id,
     _key: existingKey ?? nextRowKey(),
@@ -47,9 +52,10 @@ export function entryToRow(entry: TimeEntry, projects: Project[], subProjects: S
     _notes: entry.notes ?? '',
     startTime: entry.startTime,
     endTime: entry.endTime,
-    project: projects.find((p) => p.id === entry.projectId)?.key ?? '',
+    project: project?.key ?? '',
     subProject: subProjects.find((s) => s.id === entry.subProjectId)?.key ?? '',
     itemNr: entry.itemNr ?? '',
+    itemTitle: item?.title ?? '',
     taskText: entry.taskText,
   }
 }
@@ -61,6 +67,7 @@ export function rowContentEqual(a: GridRowData, b: GridRowData): boolean {
     a.project === b.project &&
     a.subProject === b.subProject &&
     a.itemNr === b.itemNr &&
+    a.itemTitle === b.itemTitle &&
     a.taskText === b.taskText
   )
 }
@@ -111,6 +118,7 @@ export function useGridRows(
   dbEntries: TimeEntry[],
   projects: Project[],
   subProjects: SubProject[],
+  items: Item[],
   editingRows: RefObject<Map<string, number>>
 ) {
   const initialRows = [createEmptyRow()]
@@ -146,7 +154,7 @@ export function useGridRows(
       }
 
       if (existing) {
-        return entryToRow(entry, projects, subProjects, existing._key)
+        return entryToRow(entry, projects, subProjects, items, existing._key)
       }
 
       // Adopt pending-commit rows first (they are being saved right now)
@@ -172,7 +180,7 @@ export function useGridRows(
         return { ...matchingUnsaved, _id: entry.id, _isNew: false, _notes: entry.notes ?? '' }
       }
 
-      return entryToRow(entry, projects, subProjects)
+      return entryToRow(entry, projects, subProjects, items)
     })
 
     // Preserve any dirty new rows (without _id)
@@ -188,7 +196,7 @@ export function useGridRows(
     }
 
     setRowsImmediate(mergedRows)
-  }, [dbEntries, projects, subProjects, setRowsImmediate, editingRows])
+  }, [dbEntries, projects, subProjects, items, setRowsImmediate, editingRows])
 
   return { rows, rowsRef, updateRows, setRows: setRowsImmediate }
 }

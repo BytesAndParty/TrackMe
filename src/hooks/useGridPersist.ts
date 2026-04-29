@@ -72,7 +72,7 @@ export function useGridPersist(
           await db.items.add({
             projectId: project.id!,
             itemNr: row.itemNr.trim(),
-            title: row.taskText || `Item #${row.itemNr.trim()}`,
+            title: row.itemTitle || row.taskText || `Item #${row.itemNr.trim()}`,
             description: '',
             status: 'todo',
             url: '',

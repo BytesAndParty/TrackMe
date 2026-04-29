@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { GridProvider, type GridContextValue } from './GridContext'
 import { GridRow } from './GridRow'
 
-const COLUMN_COUNT = 6
+const COLUMN_COUNT = 7
 
 interface EditableGridProps {
   date: string
@@ -32,7 +32,8 @@ export default function EditableGrid({
     date,
     entries,
     projects,
-    subProjects
+    subProjects,
+    items
   )
 
   const [showUndoToast, setShowUndoToast] = useState(false)
@@ -199,13 +200,17 @@ export default function EditableGrid({
 
   const getItemSuggestions = useCallback((projectKey: string, subProjectKey: string) => {
     if (!projectKey) {
-      return items.map((item) => ({ key: item.itemNr, name: item.title, id: item.id! }))
+      return items
+        .filter((i) => i.status !== 'done')
+        .map((item) => ({ key: item.itemNr, name: item.title, id: item.id! }))
     }
     const project = projects.find((p) => p.key.toLowerCase() === projectKey.toLowerCase())
     if (!project) {
-      return items.map((item) => ({ key: item.itemNr, name: item.title, id: item.id! }))
+      return items
+        .filter((i) => i.status !== 'done')
+        .map((item) => ({ key: item.itemNr, name: item.title, id: item.id! }))
     }
-    const projectItems = items.filter((item) => item.projectId === project.id)
+    const projectItems = items.filter((item) => item.projectId === project.id && item.status !== 'done')
 
     if (!subProjectKey) {
       return projectItems.map((item) => ({ key: item.itemNr, name: item.title, id: item.id! }))
@@ -227,6 +232,46 @@ export default function EditableGrid({
     const matching = projectItems.filter((item) => subProjectItemNrs.has(item.itemNr))
     const rest = projectItems.filter((item) => !subProjectItemNrs.has(item.itemNr))
     return [...matching, ...rest].map((item) => ({ key: item.itemNr, name: item.title, id: item.id! }))
+  }, [items, projects, subProjects, entries])
+
+  const getItemTitleSuggestions = useCallback((projectKey: string, subProjectKey: string) => {
+    if (!projectKey) {
+      return items
+        .filter((i) => i.status !== 'done')
+        .map((item) => ({ key: item.title, name: item.itemNr, id: item.id! }))
+    }
+    const project = projects.find((p) => p.key.toLowerCase() === projectKey.toLowerCase())
+    if (!project) {
+      return items
+        .filter((i) => i.status !== 'done')
+        .map((item) => ({ key: item.title, name: item.itemNr, id: item.id! }))
+    }
+    const projectItems = items.filter((item) => item.projectId === project.id && item.status !== 'done')
+
+    if (!subProjectKey) {
+      return projectItems.map((item) => ({ key: item.title, name: item.itemNr, id: item.id! }))
+    }
+
+    const subProject = subProjects.find(
+      (s) => s.projectId === project.id && s.key.toLowerCase() === subProjectKey.toLowerCase()
+    )
+    if (!subProject) {
+      return projectItems.map((item) => ({ key: item.title, name: item.itemNr, id: item.id! }))
+    }
+
+    const subProjectItemIds = new Set(
+      entries
+        .filter((e) => e.projectId === project.id && e.subProjectId === subProject.id && e.itemNr)
+        .map((e) => {
+          const item = items.find(i => i.projectId === project.id && i.itemNr === e.itemNr)
+          return item?.id
+        })
+        .filter(Boolean)
+    )
+
+    const matching = projectItems.filter((item) => subProjectItemIds.has(item.id))
+    const rest = projectItems.filter((item) => !subProjectItemIds.has(item.id))
+    return [...matching, ...rest].map((item) => ({ key: item.title, name: item.itemNr, id: item.id! }))
   }, [items, projects, subProjects, entries])
 
   const findItem = useCallback((itemNr: string, projectKey: string): Item | undefined => {
@@ -275,6 +320,7 @@ export default function EditableGrid({
             <th className="text-left text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider px-2 py-2.5 w-32">{t('grid.project')}</th>
             <th className="text-left text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider px-2 py-2.5 w-32">{t('grid.subProject')}</th>
             <th className="text-left text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider px-2 py-2.5 w-24">{t('grid.itemNr')}</th>
+            <th className="text-left text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider px-2 py-2.5 w-48">{t('grid.itemTitle')}</th>
             <th className="text-left text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider px-2 py-2.5">{t('grid.comment')}</th>
             <th className="text-right text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider px-3 py-2.5 w-20">{t('common.duration')}</th>
             <th className="w-10 py-2.5"></th>
@@ -290,6 +336,7 @@ export default function EditableGrid({
                 projectSuggestions={projectSuggestions}
                 getSubProjectSuggestions={getSubProjectSuggestions}
                 getItemSuggestions={getItemSuggestions}
+                getItemTitleSuggestions={getItemTitleSuggestions}
                 buildItemUrl={buildItemUrl}
                 findItem={findItem}
                 onItemClick={onItemClick}
@@ -301,7 +348,7 @@ export default function EditableGrid({
         </GridProvider>
         <tfoot>
           <tr className="border-t border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
-            <td colSpan={6} className="px-2 py-2.5">
+            <td colSpan={7} className="px-2 py-2.5">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{t('common.total')}</span>
 

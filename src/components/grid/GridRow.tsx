@@ -14,6 +14,7 @@ interface GridRowProps {
   projectSuggestions: Suggestion[]
   getSubProjectSuggestions: (projectKey: string) => Suggestion[]
   getItemSuggestions: (projectKey: string, subProjectKey: string) => Suggestion[]
+  getItemTitleSuggestions: (projectKey: string, subProjectKey: string) => Suggestion[]
   buildItemUrl: (itemNr: string, projectKey: string) => string | null
   findItem: (itemNr: string, projectKey: string) => Item | undefined
   onItemClick?: (item: Item) => void
@@ -34,6 +35,7 @@ export const GridRow = React.memo(function GridRow({
   projectSuggestions,
   getSubProjectSuggestions,
   getItemSuggestions,
+  getItemTitleSuggestions,
   buildItemUrl,
   findItem,
   onItemClick,
@@ -143,12 +145,23 @@ export const GridRow = React.memo(function GridRow({
         </div>
       </td>
 
-      {/* Comment */}
+      {/* Item Title */}
       <td className="grid-cell" data-row-key={row._key} data-col={5}>
+        <AutocompleteCell
+          value={row.itemTitle}
+          suggestions={getItemTitleSuggestions(row.project, row.subProject)}
+          rowKey={row._key}
+          col={5}
+          field="itemTitle"
+        />
+      </td>
+
+      {/* Comment */}
+      <td className="grid-cell" data-row-key={row._key} data-col={6}>
         <TextCell
           value={row.taskText}
           rowKey={row._key}
-          col={5}
+          col={6}
           field="taskText"
           placeholder={t('grid.descriptionPlaceholder')}
         />

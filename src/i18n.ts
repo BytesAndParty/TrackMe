@@ -167,7 +167,8 @@ const resources = {
         end: 'Ende',
         project: 'Projekt',
         subProject: 'Unterprojekt',
-        itemNr: 'Item Nr',
+        itemNr: 'Item',
+        itemTitle: 'Titel',
         comment: 'Kommentar',
         openInAzure: 'In Azure DevOps öffnen',
         openItem: 'Item öffnen',
@@ -401,7 +402,8 @@ const resources = {
         end: 'End',
         project: 'Project',
         subProject: 'Sub-project',
-        itemNr: 'Item No.',
+        itemNr: 'Item',
+        itemTitle: 'Title',
         comment: 'Comment',
         openInAzure: 'Open in Azure DevOps',
         openItem: 'Open item',
@@ -451,7 +453,7 @@ const resources = {
         projectInfo: 'Project info',
         projectRequired: 'Project *',
         selectProject: 'Choose project...',
-        itemNr: 'Item no.',
+        itemNr: 'Item',
         itemNrPlaceholder: 'e.g. 1234',
         statusLabel: 'Status',
         estimateHours: 'Estimate (hours)',
@@ -506,3 +508,4 @@ if (typeof document !== 'undefined') {
 }
 
 export default i18n
+
