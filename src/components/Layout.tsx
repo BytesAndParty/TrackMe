@@ -1,6 +1,7 @@
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useTheme } from '../hooks/useTheme'
 import { useTranslation } from 'react-i18next'
+import { useHotkey } from '@tanstack/react-hotkeys'
 import ShortcutOverlay from './ShortcutOverlay'
 
 const navItems = [
@@ -38,7 +39,10 @@ const themeIcons = {
 export default function Layout() {
   const { theme, cycleTheme } = useTheme()
   const { t, i18n } = useTranslation()
+  const navigate = useNavigate()
   const nextLanguage = i18n.resolvedLanguage === 'en' ? 'de' : 'en'
+
+  useHotkey('Mod+K', () => navigate('/projects'), { meta: { name: t('layout.nav.projects') } })
 
   const themeLabels = {
     light: t('layout.theme.light'),

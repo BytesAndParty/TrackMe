@@ -250,22 +250,22 @@ export default function DayView() {
 		if (commitAllDirtyRef.current) {
 			void commitAllDirtyRef.current();
 		}
-	});
+	}, { meta: { name: t("common.save") } });
 
 	useHotkey("Alt+ArrowLeft", (e) => {
 		e.preventDefault();
 		void navigateDay(-1);
-	});
+	}, { meta: { name: t("dayView.navDay") } });
 
 	useHotkey("Alt+ArrowRight", (e) => {
 		e.preventDefault();
 		void navigateDay(1);
-	});
+	}, { meta: { name: t("dayView.navDay") } });
 
 	useHotkey("Alt+T", (e) => {
 		e.preventDefault();
 		void changeDate(todayISO());
-	});
+	}, { meta: { name: t("dayView.today") } });
 
 	return (
 		<div className="space-y-6">

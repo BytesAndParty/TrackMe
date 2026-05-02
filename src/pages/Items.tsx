@@ -3,6 +3,7 @@ import { Link, useNavigate, Outlet } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useTranslation } from 'react-i18next'
 import { db, type ItemStatus } from '../db'
+import { useHotkey } from '@tanstack/react-hotkeys'
 import KanbanBoard from '../components/kanban/KanbanBoard'
 import ItemDetailModal from '../components/kanban/ItemDetailModal'
 
@@ -38,6 +39,8 @@ export default function Items() {
     in_progress: items.filter((i) => i.status === 'in_progress'),
     done: items.filter((i) => i.status === 'done'),
   }
+
+  useHotkey('N', () => setCreatingWithStatus('todo'), { meta: { name: t('kanban.newItem') } })
 
   async function handleDelete(itemId: number) {
     await db.items.delete(itemId)

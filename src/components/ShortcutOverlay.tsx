@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'react'
-import { useTranslation } from 'react-i18next'
-import { useLocation } from 'react-router-dom'
+import { useHotkeyRegistrations } from '@tanstack/react-hotkeys'
 
 export default function ShortcutOverlay() {
-  const { t } = useTranslation()
-  const location = useLocation()
+  const { hotkeys } = useHotkeyRegistrations()
   const [isVisible, setIsVisible] = useState(false)
   const [isHolding, setIsHolding] = useState(false)
 
@@ -16,7 +14,7 @@ export default function ShortcutOverlay() {
         setIsHolding(true)
         timer = setTimeout(() => {
           setIsVisible(true)
-        }, 1500) // 1.5s instead of 2s for better UX, but close to user request
+        }, 1500)
       }
     }
 
@@ -28,7 +26,6 @@ export default function ShortcutOverlay() {
       }
     }
 
-    // Also hide if window loses focus
     function handleBlur() {
       setIsHolding(false)
       setIsVisible(false)
@@ -48,31 +45,20 @@ export default function ShortcutOverlay() {
 
   if (!isVisible) return null
 
-  const isDayView = location.pathname === '/'
-  const isItemsView = location.pathname.startsWith('/items')
-
-  const shortcuts = [
-    { key: 'Mod + S', label: t('common.save') },
-    { key: 'Mod + K', label: t('layout.nav.projects') }, // Just an example, maybe add more
-  ]
-
-  if (isDayView) {
-    shortcuts.push(
-      { key: 'Alt + T', label: t('dayView.today') },
-      { key: 'Alt + ← / →', label: t('dayView.navDay') },
-      { key: 'Tab', label: t('dayView.nextCell') },
-      { key: 'Enter', label: t('dayView.nextRow') },
-      { key: 'Esc', label: t('dayView.cancel') },
-      { key: 'Mod + Backspace', label: t('common.delete') }
-    )
-  }
-
-  if (isItemsView) {
-    shortcuts.push(
-      { key: 'N', label: t('kanban.newItem') },
-      { key: 'D', label: t('kanban.trash') }
-    )
-  }
+  // Deduplicate and filter shortcuts that have a name (meta.name)
+  const displayShortcuts = hotkeys
+    .filter(reg => reg.options.meta?.name)
+    .map(reg => ({
+      key: reg.hotkey,
+      label: reg.options.meta!.name!
+    }))
+    // Simple deduplication by key
+    .reduce((acc, current) => {
+      if (!acc.some(item => item.key === current.key)) {
+        acc.push(current)
+      }
+      return acc
+    }, [] as { key: string; label: string }[])
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/40 backdrop-blur-sm animate-in fade-in duration-200">
@@ -90,7 +76,7 @@ export default function ShortcutOverlay() {
         </div>
 
         <div className="grid grid-cols-1 gap-2">
-          {shortcuts.map((s, i) => (
+          {displayShortcuts.map((s, i) => (
             <div key={i} className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
               <span className="text-sm text-slate-600 dark:text-slate-300 font-medium">{s.label}</span>
               <kbd className="px-2 py-1 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md text-[10px] font-mono font-bold text-slate-500 dark:text-slate-400 shadow-sm">
@@ -98,6 +84,9 @@ export default function ShortcutOverlay() {
               </kbd>
             </div>
           ))}
+          {displayShortcuts.length === 0 && (
+            <p className="text-sm text-slate-400 text-center py-4">Keine speziellen Shortcuts für diese Seite.</p>
+          )}
         </div>
 
         <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 flex justify-center">
