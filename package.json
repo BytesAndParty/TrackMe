@@ -12,6 +12,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@tanstack/react-hotkeys": "^0.10.0",
     "dexie": "^4.3.0",
     "dexie-react-hooks": "^4.2.0",
     "i18next": "^25.8.13",

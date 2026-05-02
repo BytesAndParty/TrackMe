@@ -1,16 +1,19 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useTranslation } from "react-i18next";
+import { useHotkey } from "@tanstack/react-hotkeys";
 import { db } from "../db";
 import {
 	todayISO,
 	toLocalISO,
 	formatDateLong,
 	formatDuration,
+	calculateDuration,
 } from "../lib/parser";
 import EditableGrid from "../components/grid/EditableGrid";
 import WelcomeBanner from "../components/WelcomeBanner";
+import { type GridRowData } from "../hooks/useGridRows";
 
 export default function DayView() {
 	const { t } = useTranslation();
@@ -25,6 +28,9 @@ export default function DayView() {
 			return dateParam;
 		return todayISO();
 	});
+
+	// State for live grid data to update overview immediately
+	const [liveRows, setLiveRows] = useState<GridRowData[]>([]);
 
 	const entries =
 		useLiveQuery(
@@ -41,118 +47,165 @@ export default function DayView() {
 	const items = useLiveQuery(() => db.items.toArray()) ?? [];
 	const allEntryCount = useLiveQuery(() => db.timeEntries.count()) ?? 0;
 
-	const totalMinutes = entries.reduce(
-		(sum, e) => sum + (e.durationMinutes || 0),
-		0
-	);
+	const totalMinutes = useMemo(() => {
+		if (liveRows.length > 0) {
+			return liveRows.reduce((sum, r) => {
+				const d = calculateDuration(r.startTime, r.endTime);
+				return sum + (d > 0 ? d : 0);
+			}, 0);
+		}
+		return entries.reduce((sum, e) => sum + (e.durationMinutes || 0), 0);
+	}, [liveRows, entries]);
 
-	// Transfer groups: aggregate entries by sub-project (or project if no sub-project)
-	const itemTitleByProjectAndNr = new Map<string, string>();
-	for (const item of items) {
-		itemTitleByProjectAndNr.set(
+	// Transfer groups: aggregate by sub-project (or project if no sub-project)
+	// Using useMemo with liveRows for instant updates
+	const transferGroups = useMemo(() => {
+		const itemTitleByProjectAndNr = new Map<string, string>();
+		for (const item of items) {
+			itemTitleByProjectAndNr.set(
 			`${item.projectId}-${item.itemNr}`,
 			item.title.trim()
-		);
-	}
-
-	type TransferGroup = {
-		key: string;
-		label: string;
-		minutes: number;
-		itemsText: string;
-		hoursDecimal: string;
-	};
-
-	function formatHoursDecimal(minutes: number): string {
-		return (minutes / 60).toFixed(2);
-	}
-
-	const transferGroupMap = new Map<
-		string,
-		{ label: string; entries: typeof entries; minutes: number }
-	>();
-	for (const entry of entries) {
-		const project = projects.find((p) => p.id === entry.projectId);
-		const subProject = subProjects.find((s) => s.id === entry.subProjectId);
-
-		let key = "no-project";
-		let label = t("dayView.noProject");
-
-		if (subProject) {
-			key = `sub-${subProject.id}`;
-			label = `${project?.key ?? "?"} / ${subProject.key}`;
-		} else if (project) {
-			key = `proj-${project.id}`;
-			label = project.key;
-		}
-
-		const group = transferGroupMap.get(key);
-		if (group) {
-			group.entries.push(entry);
-			group.minutes += entry.durationMinutes;
-		} else {
-			transferGroupMap.set(key, {
-				label,
-				entries: [entry],
-				minutes: entry.durationMinutes,
-			});
-		}
-	}
-
-	const transferGroups: TransferGroup[] = Array.from(
-		transferGroupMap.entries()
-	)
-		.map(([key, group]) => {
-			const byItem = new Map<
-				string,
-				{ label: string; texts: Set<string> }
-			>();
-			for (const entry of group.entries) {
-				const itemNr = entry.itemNr.trim();
-				const itemKey = itemNr || "__none__";
-				const itemTitle = entry.projectId
-					? itemTitleByProjectAndNr.get(
-							`${entry.projectId}-${itemNr}`
-						)
-					: undefined;
-				const itemLabel = itemNr
-					? itemTitle
-						? `${itemNr} ${itemTitle}`
-						: `${itemNr}`
-					: "";
-
-				if (!byItem.has(itemKey)) {
-					byItem.set(itemKey, { label: itemLabel, texts: new Set() });
-				}
-
-				const taskText = entry.taskText.trim();
-				const notes = entry.notes.trim();
-				// Skip taskText if it duplicates the item title
-				if (taskText && taskText !== itemTitle)
-					byItem.get(itemKey)!.texts.add(taskText);
-				if (notes && notes !== taskText && notes !== itemTitle)
-					byItem.get(itemKey)!.texts.add(notes);
+			);
 			}
 
-			const itemLines = Array.from(byItem.values())
-				.map((item) => {
-					const descriptions = Array.from(item.texts);
-					if (!item.label && descriptions.length === 0) return "";
-					if (!item.label) return descriptions.join(" | ");
-					if (descriptions.length === 0) return item.label;
-					return `${item.label}: ${descriptions.join(" | ")}`;
-				})
-				.filter(Boolean);
+			function formatHoursDecimal(minutes: number): string {
+			return (minutes / 60).toFixed(2);
+			}
+		const transferGroupMap = new Map<
+			string,
+			{
+				label: string;
+				entries: Array<{
+					projectId?: number;
+					subProjectId?: number;
+					itemNr: string;
+					taskText: string;
+					notes?: string;
+					durationMinutes: number;
+				}>;
+				minutes: number;
+			}
+		>();
 
-			return {
-				key,
-				label: group.label,
-				minutes: group.minutes,
-				itemsText: itemLines.join(", "),
-				hoursDecimal: formatHoursDecimal(group.minutes),
-			};
-		})
-		.sort((a, b) => b.minutes - a.minutes);
+		// Use liveRows if available (during editing), otherwise fall back to db entries
+		const sourceData =
+			liveRows.length > 0
+				? liveRows
+						.filter((r) => r.startTime && r.endTime)
+						.map((r) => {
+							const proj = projects.find(
+								(p) =>
+									p.key.toLowerCase() ===
+									r.project.toLowerCase()
+							);
+							const subProj = proj
+								? subProjects.find(
+										(s) =>
+											s.projectId === proj.id &&
+											s.key.toLowerCase() ===
+												r.subProject.toLowerCase()
+									)
+								: undefined;
+							return {
+								projectId: proj?.id,
+								subProjectId: subProj?.id,
+								itemNr: r.itemNr,
+								taskText: r.taskText,
+								notes: r._notes,
+								durationMinutes: calculateDuration(
+									r.startTime,
+									r.endTime
+								),
+							};
+						})
+				: entries;
+
+		for (const entry of sourceData) {
+			const project = projects.find((p) => p.id === entry.projectId);
+			const subProject = subProjects.find(
+				(s) => s.id === entry.subProjectId
+			);
+
+			let key = "no-project";
+			let label = t("dayView.noProject");
+
+			if (subProject) {
+				key = `sub-${subProject.id}`;
+				label = `${project?.key ?? "?"} / ${subProject.key}`;
+			} else if (project) {
+				key = `proj-${project.id}`;
+				label = project.key;
+			}
+
+			const group = transferGroupMap.get(key);
+			if (group) {
+				group.entries.push(entry);
+				group.minutes += entry.durationMinutes;
+			} else {
+				transferGroupMap.set(key, {
+					label,
+					entries: [entry],
+					minutes: entry.durationMinutes,
+				});
+			}
+		}
+
+		return Array.from(transferGroupMap.entries())
+			.map(([key, group]) => {
+				const byItem = new Map<
+					string,
+					{ label: string; texts: Set<string> }
+				>();
+				for (const entry of group.entries) {
+					const itemNr = entry.itemNr.trim();
+					const itemKey = itemNr || "__none__";
+					const itemTitle = entry.projectId
+						? itemTitleByProjectAndNr.get(
+								`${entry.projectId}-${itemNr}`
+							)
+						: undefined;
+					const itemLabel = itemNr
+						? itemTitle
+							? `${itemNr} ${itemTitle}`
+							: `${itemNr}`
+						: "";
+
+					if (!byItem.has(itemKey)) {
+						byItem.set(itemKey, {
+							label: itemLabel,
+							texts: new Set(),
+						});
+					}
+
+					const taskText = entry.taskText.trim();
+					const notes = (entry.notes || "").trim();
+					// Skip taskText if it duplicates the item title
+					if (taskText && taskText !== itemTitle)
+						byItem.get(itemKey)!.texts.add(taskText);
+					if (notes && notes !== taskText && notes !== itemTitle)
+						byItem.get(itemKey)!.texts.add(notes);
+				}
+
+				const itemLines = Array.from(byItem.values())
+					.map((item) => {
+						const descriptions = Array.from(item.texts);
+						if (!item.label && descriptions.length === 0) return "";
+						if (!item.label) return descriptions.join(" | ");
+						if (descriptions.length === 0) return item.label;
+						return `${item.label}: ${descriptions.join(" | ")}`;
+					})
+					.filter(Boolean);
+
+				return {
+					key,
+					label: group.label,
+					minutes: group.minutes,
+					itemsText: itemLines.join(", "),
+					hoursDecimal: formatHoursDecimal(group.minutes),
+				};
+			})
+			.sort((a, b) => b.minutes - a.minutes);
+	}, [liveRows, entries, projects, subProjects, items, t]);
 
 	useEffect(() => {
 		const current = searchParams.get("date");
@@ -169,30 +222,6 @@ export default function DayView() {
 		},
 		[]
 	);
-
-	// Keyboard shortcuts for date navigation
-	useEffect(() => {
-		function handleKeyDown(e: KeyboardEvent) {
-			if (!e.altKey) return;
-			switch (e.key) {
-				case "t":
-				case "T":
-					e.preventDefault();
-					void changeDate(todayISO());
-					break;
-				case "ArrowLeft":
-					e.preventDefault();
-					void navigateDay(-1);
-					break;
-				case "ArrowRight":
-					e.preventDefault();
-					void navigateDay(1);
-					break;
-			}
-		}
-		window.addEventListener("keydown", handleKeyDown);
-		return () => window.removeEventListener("keydown", handleKeyDown);
-	});
 
 	async function changeDate(nextDate: string) {
 		if (nextDate === selectedDate || isNavigatingDate) return;
@@ -214,6 +243,29 @@ export default function DayView() {
 		d.setDate(d.getDate() + offset);
 		await changeDate(toLocalISO(d));
 	}
+
+	// TanStack Hotkeys
+	useHotkey("Mod+S", (e) => {
+		e.preventDefault();
+		if (commitAllDirtyRef.current) {
+			void commitAllDirtyRef.current();
+		}
+	});
+
+	useHotkey("Alt+ArrowLeft", (e) => {
+		e.preventDefault();
+		void navigateDay(-1);
+	});
+
+	useHotkey("Alt+ArrowRight", (e) => {
+		e.preventDefault();
+		void navigateDay(1);
+	});
+
+	useHotkey("Alt+T", (e) => {
+		e.preventDefault();
+		void changeDate(todayISO());
+	});
 
 	return (
 		<div className="space-y-6">
@@ -311,6 +363,7 @@ export default function DayView() {
 						},
 					})
 				}
+				onRowsChange={setLiveRows}
 			/>
 
 			{/* Daily Transfer by SubProject */}
@@ -378,6 +431,12 @@ export default function DayView() {
 
 			{/* Keyboard hint */}
 			<div className="flex flex-wrap items-center gap-4 text-[11px] text-slate-400 dark:text-slate-500">
+				<span>
+					<kbd className="px-1 py-0.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-[10px]">
+						Mod+S
+					</kbd>{" "}
+					{t("common.save")}
+				</span>
 				<span>
 					<kbd className="px-1 py-0.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-[10px]">
 						Tab

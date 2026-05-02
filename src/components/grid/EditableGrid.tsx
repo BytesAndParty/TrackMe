@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { type TimeEntry, type Project, type SubProject, type Item } from '../../db'
-import { useGridState } from '../../hooks/useGridState'
+import { useGridState, type GridRowData } from '../../hooks/useGridState'
 import { calculateDuration, formatDuration } from '../../lib/parser'
 import { useTranslation } from 'react-i18next'
 import { GridProvider, type GridContextValue } from './GridContext'
@@ -16,6 +16,7 @@ interface EditableGridProps {
   items: Item[]
   onItemClick?: (item: Item) => void
   onCommitAllDirtyReady?: (commitAllDirty: () => Promise<boolean>) => void
+  onRowsChange?: (rows: GridRowData[]) => void
 }
 
 export default function EditableGrid({
@@ -26,6 +27,7 @@ export default function EditableGrid({
   items,
   onItemClick,
   onCommitAllDirtyReady,
+  onRowsChange,
 }: EditableGridProps) {
   const { t } = useTranslation()
   const { rows, updateCell, commitRow, commitAllDirty, deleteRow, undoDelete, markEditing, unmarkEditing, saveStatus } = useGridState(
@@ -35,6 +37,10 @@ export default function EditableGrid({
     subProjects,
     items
   )
+
+  useEffect(() => {
+    onRowsChange?.(rows)
+  }, [rows, onRowsChange])
 
   const [showUndoToast, setShowUndoToast] = useState(false)
   const undoToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
