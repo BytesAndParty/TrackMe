@@ -191,6 +191,11 @@ const resources = {
         planned: 'geplant {{duration}}',
         trash: 'Item löschen',
       },
+      shortcutOverlay: {
+        title: 'Shortcuts',
+        hint: 'Halte Shift gedrückt, um diese Übersicht zu sehen.',
+        empty: 'Keine speziellen Shortcuts für diese Seite.',
+      },
       welcome: {
         title: 'Willkommen bei TrackMe!',
         subtitle: 'In drei kurzen Schritten bist du startklar.',
@@ -425,6 +430,11 @@ const resources = {
         over: '{{duration}} over',
         planned: 'planned {{duration}}',
         trash: 'Delete item',
+      },
+      shortcutOverlay: {
+        title: 'Shortcuts',
+        hint: 'Hold Shift to see this overview.',
+        empty: 'No special shortcuts for this page.',
       },
       welcome: {
         title: 'Welcome to TrackMe!',

@@ -15,6 +15,10 @@ import EditableGrid from "../components/grid/EditableGrid";
 import WelcomeBanner from "../components/WelcomeBanner";
 import { type GridRowData } from "../hooks/useGridRows";
 
+function formatHoursDecimal(minutes: number): string {
+	return (minutes / 60).toFixed(2)
+}
+
 export default function DayView() {
 	const { t } = useTranslation();
 	const [searchParams, setSearchParams] = useSearchParams();
@@ -63,14 +67,11 @@ export default function DayView() {
 		const itemTitleByProjectAndNr = new Map<string, string>();
 		for (const item of items) {
 			itemTitleByProjectAndNr.set(
-			`${item.projectId}-${item.itemNr}`,
-			item.title.trim()
+				`${item.projectId}-${item.itemNr}`,
+				item.title.trim()
 			);
-			}
+		}
 
-			function formatHoursDecimal(minutes: number): string {
-			return (minutes / 60).toFixed(2);
-			}
 		const transferGroupMap = new Map<
 			string,
 			{
@@ -255,12 +256,12 @@ export default function DayView() {
 	useHotkey("Alt+ArrowLeft", (e) => {
 		e.preventDefault();
 		void navigateDay(-1);
-	}, { meta: { name: t("dayView.navDay") } });
+	}, { meta: { name: t("dayView.prevDayAria") } });
 
 	useHotkey("Alt+ArrowRight", (e) => {
 		e.preventDefault();
 		void navigateDay(1);
-	}, { meta: { name: t("dayView.navDay") } });
+	}, { meta: { name: t("dayView.nextDayAria") } });
 
 	useHotkey("Alt+T", (e) => {
 		e.preventDefault();
