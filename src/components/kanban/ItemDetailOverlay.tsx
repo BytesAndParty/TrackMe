@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useTranslation } from 'react-i18next'
@@ -48,6 +48,7 @@ export default function ItemDetailOverlay() {
   )
   const [notesPreview, setNotesPreview] = useState(false)
 
+  /* eslint-disable react-hooks/set-state-in-effect -- sync form state from async live query */
   useEffect(() => {
     if (item) {
       setProjectId(item.projectId)
@@ -60,10 +61,11 @@ export default function ItemDetailOverlay() {
       setNotes(item.notes)
     }
   }, [item])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
-  function close() {
+  const close = useCallback(() => {
     navigate(typeof returnTo === 'string' ? returnTo : '/items')
-  }
+  }, [navigate, returnTo])
 
   useEffect(() => {
     function handleEsc(e: KeyboardEvent) {

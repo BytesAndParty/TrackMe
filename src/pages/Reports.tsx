@@ -374,9 +374,9 @@ export default function Reports() {
                   tickFormatter={(v: number) => `${Math.round(v / 60)}h`}
                 />
                 <Tooltip
-                  formatter={(value: number | undefined, name?: string) => {
+                  formatter={(value, name) => {
                     const seg = chartSegments.find(s => s.key === name)
-                    return [formatDuration(value ?? 0), seg?.label ?? name ?? '']
+                    return [formatDuration(Number(value) || 0), seg?.label ?? String(name ?? '')]
                   }}
                   contentStyle={tooltipStyle}
                   labelStyle={tooltipLabelStyle}
@@ -416,7 +416,7 @@ export default function Reports() {
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(value: number | undefined) => [formatDuration(value ?? 0), t('common.duration')]}
+                  formatter={(value) => [formatDuration(Number(value) || 0), t('common.duration')]}
                   contentStyle={tooltipStyle}
                   labelStyle={tooltipLabelStyle}
                   itemStyle={tooltipItemStyle}

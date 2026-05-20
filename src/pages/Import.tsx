@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useTranslation } from 'react-i18next'
@@ -19,35 +19,24 @@ export default function Import() {
 
   const existingProjects = useLiveQuery(() => db.projects.toArray()) ?? []
 
-  const [parsed, setParsed] = useState<SharedProject | null>(null)
-  const [errorKey, setErrorKey] = useState<'noDataError' | 'invalidDataError' | 'decodeError' | 'importError' | null>(null)
   const [importing, setImporting] = useState(false)
-  const [duplicate, setDuplicate] = useState(false)
+  const [importError, setImportError] = useState(false)
 
-  useEffect(() => {
+  const { parsed, errorKey: parseErrorKey } = useMemo(() => {
     const data = searchParams.get('data')
-    if (!data) {
-      setErrorKey('noDataError')
-      return
-    }
+    if (!data) return { parsed: null, errorKey: 'noDataError' as const }
     try {
       const json = atob(data)
       const project = JSON.parse(json) as SharedProject
-      if (!project.key || !project.name) {
-        setErrorKey('invalidDataError')
-        return
-      }
-      setParsed(project)
+      if (!project.key || !project.name) return { parsed: null, errorKey: 'invalidDataError' as const }
+      return { parsed: project, errorKey: null }
     } catch {
-      setErrorKey('decodeError')
+      return { parsed: null, errorKey: 'decodeError' as const }
     }
   }, [searchParams])
 
-  useEffect(() => {
-    if (parsed && existingProjects.length > 0) {
-      setDuplicate(existingProjects.some(p => p.key === parsed.key))
-    }
-  }, [parsed, existingProjects])
+  const errorKey = importError ? 'importError' : parseErrorKey
+  const duplicate = parsed ? existingProjects.some(p => p.key === parsed.key) : false
 
   async function handleImport() {
     if (!parsed) return
@@ -71,7 +60,7 @@ export default function Import() {
       }
       navigate('/projects')
     } catch {
-      setErrorKey('importError')
+      setImportError(true)
       setImporting(false)
     }
   }

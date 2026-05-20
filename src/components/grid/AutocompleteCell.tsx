@@ -64,9 +64,8 @@ export default function AutocompleteCell({
         })
     : suggestions
 
-  useEffect(() => {
-    setHighlightIndex(0)
-  }, [value])
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- reset dropdown highlight on input change
+  useEffect(() => { setHighlightIndex(0) }, [value])
 
   function selectItem(item: Suggestion) {
     onChange(item.key)
