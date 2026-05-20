@@ -14,7 +14,6 @@ interface GridRowProps {
   projectSuggestions: Suggestion[]
   getSubProjectSuggestions: (projectKey: string) => Suggestion[]
   getItemSuggestions: (projectKey: string, subProjectKey: string) => Suggestion[]
-  getItemTitleSuggestions: (projectKey: string, subProjectKey: string) => Suggestion[]
   buildItemUrl: (itemNr: string, projectKey: string) => string | null
   findItem: (itemNr: string, projectKey: string) => Item | undefined
   onItemClick?: (item: Item) => void
@@ -35,7 +34,6 @@ export const GridRow = React.memo(function GridRow({
   projectSuggestions,
   getSubProjectSuggestions,
   getItemSuggestions,
-  getItemTitleSuggestions,
   buildItemUrl,
   findItem,
   onItemClick,
@@ -104,56 +102,47 @@ export const GridRow = React.memo(function GridRow({
           </div>
           {(() => {
             const itemUrl = buildItemUrl(row.itemNr, row.project)
-            const item = findItem(row.itemNr, row.project)
-            return (
-              <>
-                {itemUrl && (
-                  <a
-                    href={itemUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="opacity-0 group-hover:opacity-100 p-1 text-slate-300 dark:text-slate-600 hover:text-blue-600 dark:hover:text-blue-400 transition-all shrink-0"
-                    tabIndex={-1}
-                    title={t('grid.openInAzure')}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
-                      <polyline points="15 3 21 3 21 9" />
-                      <line x1="10" y1="14" x2="21" y2="3" />
-                    </svg>
-                  </a>
-                )}
-                {item && onItemClick && !itemUrl && (
-                  <button
-                    type="button"
-                    onClick={() => onItemClick(item)}
-                    className="opacity-0 group-hover:opacity-100 p-1 text-slate-300 dark:text-slate-600 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all shrink-0"
-                    tabIndex={-1}
-                    title={t('grid.openItem')}
-                  >
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
-                      <polyline points="15 3 21 3 21 9" />
-                      <line x1="10" y1="14" x2="21" y2="3" />
-                    </svg>
-                  </button>
-                )}
-              </>
-            )
+            return itemUrl ? (
+              <a
+                href={itemUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="opacity-0 group-hover:opacity-100 p-1 text-slate-300 dark:text-slate-600 hover:text-blue-600 dark:hover:text-blue-400 transition-all shrink-0"
+                tabIndex={-1}
+                title={t('grid.openInAzure')}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+                  <polyline points="15 3 21 3 21 9" />
+                  <line x1="10" y1="14" x2="21" y2="3" />
+                </svg>
+              </a>
+            ) : null
           })()}
         </div>
       </td>
 
-      {/* Item Title */}
-      <td className="grid-cell" data-row-key={row._key} data-col={5}>
-        <AutocompleteCell
-          value={row.itemTitle}
-          suggestions={getItemTitleSuggestions(row.project, row.subProject)}
-          rowKey={row._key}
-          col={5}
-          field="itemTitle"
-        />
+      {/* Item Title (read-only, double-click opens detail) */}
+      <td
+        className="grid-cell"
+        data-row-key={row._key}
+        data-col={5}
+        onDoubleClick={() => {
+          const item = findItem(row.itemNr, row.project)
+          if (item && onItemClick) onItemClick(item)
+        }}
+      >
+        <span
+          className={`block w-full px-2 py-2 text-sm truncate ${
+            row.itemTitle
+              ? 'text-slate-700 dark:text-slate-200'
+              : 'text-slate-300 dark:text-slate-600'
+          } ${findItem(row.itemNr, row.project) && onItemClick ? 'cursor-pointer' : ''}`}
+          title={row.itemTitle || undefined}
+        >
+          {row.itemTitle || '\u2013'}
+        </span>
       </td>
 
       {/* Comment */}

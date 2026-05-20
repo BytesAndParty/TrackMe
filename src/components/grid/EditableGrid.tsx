@@ -240,46 +240,6 @@ export default function EditableGrid({
     return [...matching, ...rest].map((item) => ({ key: item.itemNr, name: item.title, id: item.id! }))
   }, [items, projects, subProjects, entries])
 
-  const getItemTitleSuggestions = useCallback((projectKey: string, subProjectKey: string) => {
-    if (!projectKey) {
-      return items
-        .filter((i) => i.status !== 'done')
-        .map((item) => ({ key: item.title, name: item.itemNr, id: item.id! }))
-    }
-    const project = projects.find((p) => p.key.toLowerCase() === projectKey.toLowerCase())
-    if (!project) {
-      return items
-        .filter((i) => i.status !== 'done')
-        .map((item) => ({ key: item.title, name: item.itemNr, id: item.id! }))
-    }
-    const projectItems = items.filter((item) => item.projectId === project.id && item.status !== 'done')
-
-    if (!subProjectKey) {
-      return projectItems.map((item) => ({ key: item.title, name: item.itemNr, id: item.id! }))
-    }
-
-    const subProject = subProjects.find(
-      (s) => s.projectId === project.id && s.key.toLowerCase() === subProjectKey.toLowerCase()
-    )
-    if (!subProject) {
-      return projectItems.map((item) => ({ key: item.title, name: item.itemNr, id: item.id! }))
-    }
-
-    const subProjectItemIds = new Set(
-      entries
-        .filter((e) => e.projectId === project.id && e.subProjectId === subProject.id && e.itemNr)
-        .map((e) => {
-          const item = items.find(i => i.projectId === project.id && i.itemNr === e.itemNr)
-          return item?.id
-        })
-        .filter(Boolean)
-    )
-
-    const matching = projectItems.filter((item) => subProjectItemIds.has(item.id))
-    const rest = projectItems.filter((item) => !subProjectItemIds.has(item.id))
-    return [...matching, ...rest].map((item) => ({ key: item.title, name: item.itemNr, id: item.id! }))
-  }, [items, projects, subProjects, entries])
-
   const findItem = useCallback((itemNr: string, projectKey: string): Item | undefined => {
     if (!itemNr.trim()) return undefined
     const project = projects.find((p) => p.key.toLowerCase() === projectKey.toLowerCase())
@@ -342,7 +302,6 @@ export default function EditableGrid({
                 projectSuggestions={projectSuggestions}
                 getSubProjectSuggestions={getSubProjectSuggestions}
                 getItemSuggestions={getItemSuggestions}
-                getItemTitleSuggestions={getItemTitleSuggestions}
                 buildItemUrl={buildItemUrl}
                 findItem={findItem}
                 onItemClick={onItemClick}
