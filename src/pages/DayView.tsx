@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useTranslation } from "react-i18next";
 import { useHotkey } from "@tanstack/react-hotkeys";
@@ -13,6 +13,7 @@ import {
 } from "../lib/parser";
 import EditableGrid from "../components/grid/EditableGrid";
 import WelcomeBanner from "../components/WelcomeBanner";
+import ItemDetailOverlay from "../components/kanban/ItemDetailOverlay";
 import { type GridRowData } from "../hooks/useGridRows";
 
 function formatHoursDecimal(minutes: number): string {
@@ -22,9 +23,8 @@ function formatHoursDecimal(minutes: number): string {
 export default function DayView() {
 	const { t } = useTranslation();
 	const [searchParams, setSearchParams] = useSearchParams();
-	const navigate = useNavigate();
-	const location = useLocation();
 	const commitAllDirtyRef = useRef<null | (() => Promise<boolean>)>(null);
+	const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
 	const [isNavigatingDate, setIsNavigatingDate] = useState(false);
 	const [selectedDate, setSelectedDate] = useState(() => {
 		const dateParam = searchParams.get("date");
@@ -357,13 +357,7 @@ export default function DayView() {
 				subProjects={subProjects}
 				items={items}
 				onCommitAllDirtyReady={registerCommitAllDirty}
-				onItemClick={(item) =>
-					navigate(`/items/${item.id}`, {
-						state: {
-							returnTo: `${location.pathname}${location.search}`,
-						},
-					})
-				}
+				onItemClick={(item) => setSelectedItemId(item.id!)}
 				onRowsChange={setLiveRows}
 			/>
 
@@ -481,6 +475,13 @@ export default function DayView() {
 					</code>
 				</span>
 			</div>
+
+			{selectedItemId !== null && (
+				<ItemDetailOverlay
+					itemId={selectedItemId}
+					onClose={() => setSelectedItemId(null)}
+				/>
+			)}
 		</div>
 	);
 }

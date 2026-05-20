@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate, Outlet } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useTranslation } from 'react-i18next'
 import { db, type ItemStatus } from '../db'
@@ -105,7 +105,6 @@ export default function Items() {
         />
       )}
 
-      <Outlet />
 
       {creatingWithStatus && (
         <ItemDetailModal

@@ -108,10 +108,12 @@ export default function EditableGrid({
     switch (e.key) {
       case 'Tab':
         if (e.shiftKey) {
-          if (col > 0) { e.preventDefault(); focusCell(rowKey, col - 1) }
+          const prev = col === 6 ? 4 : col - 1
+          if (col > 0) { e.preventDefault(); focusCell(rowKey, prev) }
           else if (rowIndex > 0) { e.preventDefault(); focusCellAt(rowIndex - 1, COLUMN_COUNT - 1) }
         } else {
-          if (col < COLUMN_COUNT - 1) { e.preventDefault(); focusCell(rowKey, col + 1) }
+          const next = col === 4 ? 6 : col + 1
+          if (col < COLUMN_COUNT - 1) { e.preventDefault(); focusCell(rowKey, next) }
           else { e.preventDefault(); void commitRow(rowKey); focusCellAt(rowIndex + 1, 0) }
         }
         break
@@ -139,7 +141,7 @@ export default function EditableGrid({
         const input = e.target as HTMLInputElement
         if (input.selectionStart === 0 && input.selectionStart === input.selectionEnd && col > 0) {
           e.preventDefault()
-          focusCell(rowKey, col - 1)
+          focusCell(rowKey, col - 1 === 5 ? 4 : col - 1)
         }
         break
       }
@@ -148,7 +150,7 @@ export default function EditableGrid({
         const input = e.target as HTMLInputElement
         if (input.selectionStart === input.value.length && input.selectionStart === input.selectionEnd && col < COLUMN_COUNT - 1) {
           e.preventDefault()
-          focusCell(rowKey, col + 1)
+          focusCell(rowKey, col + 1 === 5 ? 6 : col + 1)
         }
         break
       }

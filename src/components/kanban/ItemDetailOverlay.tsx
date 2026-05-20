@@ -7,12 +7,18 @@ import { formatDuration, formatDateShort } from '../../lib/parser'
 import ItemDetailForm from './ItemDetailForm'
 import { minutesToHoursInput, parseEstimatedMinutes } from './itemDetailUtils'
 
-export default function ItemDetailOverlay() {
+interface Props {
+  itemId?: number
+  onClose?: () => void
+  mode?: 'modal' | 'page'
+}
+
+export default function ItemDetailOverlay({ itemId: propItemId, onClose: propOnClose, mode = 'modal' }: Props = {}) {
   const { t } = useTranslation()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const location = useLocation()
-  const numericId = Number(id)
+  const numericId = propItemId ?? Number(id)
   const returnTo =
     typeof location.state === 'object' && location.state !== null && 'returnTo' in location.state
       ? location.state.returnTo
@@ -64,8 +70,12 @@ export default function ItemDetailOverlay() {
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const close = useCallback(() => {
-    navigate(typeof returnTo === 'string' ? returnTo : '/items')
-  }, [navigate, returnTo])
+    if (propOnClose) {
+      propOnClose()
+    } else {
+      navigate(typeof returnTo === 'string' ? returnTo : '/items')
+    }
+  }, [propOnClose, navigate, returnTo])
 
   useEffect(() => {
     function handleEsc(e: KeyboardEvent) {
@@ -113,11 +123,8 @@ export default function ItemDetailOverlay() {
   const hasEstimate = estimatedMinutes > 0
   const remainingMinutes = estimatedMinutes - totalMinutes
 
-  return (
-    <div className="fixed inset-0 z-100 flex justify-end">
-      <div className="absolute inset-0 bg-black/30 dark:bg-black/50" onClick={close} />
-
-      <div className="relative bg-white dark:bg-slate-900 shadow-xl w-full max-w-4xl h-[90vh] mt-[5vh] mr-4 rounded-xl overflow-hidden flex flex-col animate-slide-in-right">
+  const panelContent = (
+    <>
         <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between shrink-0">
           <h2 className="text-lg font-bold">
             {item.itemNr ? `#${item.itemNr} – ` : ''}
@@ -301,6 +308,22 @@ export default function ItemDetailOverlay() {
             </button>
           </div>
         </div>
+    </>
+  )
+
+  if (mode === 'page') {
+    return (
+      <div className="bg-white dark:bg-slate-900 flex flex-col h-full overflow-hidden">
+        {panelContent}
+      </div>
+    )
+  }
+
+  return (
+    <div className="fixed inset-0 z-100 flex justify-end">
+      <div className="absolute inset-0 bg-black/30 dark:bg-black/50" onClick={close} />
+      <div className="relative bg-white dark:bg-slate-900 shadow-xl w-full max-w-4xl h-[90vh] mt-[5vh] mr-4 rounded-xl overflow-hidden flex flex-col animate-slide-in-right">
+        {panelContent}
       </div>
     </div>
   )
