@@ -208,3 +208,39 @@ Dieses Dokument definiert eine schnelle, lokal laufende, Windows-basierte Zeiter
 
 ## 13. Weitere Punkte
 Ich möchte den Zeitraum mit den geleisteten Stunden einstellbar machen
+
+---
+
+## 14. Backlog (Stand 2026-07-08)
+
+Noch nicht umgesetzt – Sammlung offener Punkte aus aktueller Review-Session.
+
+### 14.1 Design
+Aktuelles UI-Design ist nur ein erster Wurf und muss grundlegend überarbeitet werden. Scope/Richtung noch offen.
+
+### 14.2 Day View – Bugs bei Anzeige & Speichern
+Es gibt noch Bugs in der Day View, die Anzeige und Speichern betreffen. **Konkrete Symptome/Repro-Schritte stehen noch aus.**
+
+### 14.3 Navigation aufräumen
+Week-, Month- und Reports-View werden kaum genutzt. Diese unter einem gemeinsamen Nav-Reiter gruppieren statt als eigene Top-Level-Einträge (betrifft `Layout.tsx`).
+
+### 14.4 Item-Erstellung: kein Auto-Create mehr
+Automatische Item-Anlage beim Speichern eines Grid-Eintrags (aktuell in `useGridPersist.ts`, wenn eine unbekannte Item-Nr getippt wird) entfernen.
+
+Stattdessen: Item-Nr oder Item-Titel eingeben; wird kein Treffer in den Vorschlägen gefunden, öffnet Enter oder Klick auf ein "+" das `ItemDetailModal` zur expliziten Neuanlage, vorbefüllt mit dem Eingegebenen.
+
+### 14.5 Default-Text bei leerer Item-Beschreibung
+`dayView.noItemDescription` ("Ohne Item/Beschreibung") ersetzen durch eine Formulierung, die allgemeine Entwickler-Tätigkeit beschreibt, z. B. "Allgemeine Anpassung, Verbesserung oder Solution Design" (DE + EN in `i18n.ts`).
+
+### 14.6 Papierkorb-Position auf Items-Seite
+Aktuell liegt der Papierkorb (Drag&Drop-Ziel) unterhalb der drei Kanban-Spalten und ist nur während des Ziehens sichtbar (`KanbanBoard.tsx`). Nach oben verschieben, neben die "Items"-Überschrift bzw. als Overlay.
+
+### 14.7 Item-Vorschläge nach Unterprojekt filtern
+Item-Nr-Vorschläge in der Day-View-Autocomplete sollen hart nach aktuell gewähltem Unterprojekt gefiltert werden (aktuell nur Sortier-Priorisierung über Buchungshistorie, kein echter Filter).
+
+Entscheidung: `Item` bekommt ein neues optionales Feld `subProjectId` (DB-Schema-Migration nötig).
+- Beim Neuanlegen eines Items wird `subProjectId` automatisch aus dem aktuell in der Zeile gesetzten Unterprojekt übernommen.
+- Items ohne `subProjectId` werden unabhängig vom gewählten Unterprojekt weiter angezeigt (kein Filter greift).
+
+### 14.8 Edge Case: Unterprojekt-Wechsel nach Item-Auswahl
+Wenn ein Item ausgewählt ist und danach das Unterprojekt geändert wird, werden Item-Nr und Item-Titel der Zeile automatisch geleert.
