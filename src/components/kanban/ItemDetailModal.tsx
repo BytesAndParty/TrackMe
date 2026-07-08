@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { db, type Item, type ItemStatus, type Project } from '../../db'
+import { db, type Item, type ItemStatus, type Project, type SubProject } from '../../db'
 import ItemDetailForm from './ItemDetailForm'
 import ItemDetailFooter from './ItemDetailFooter'
 import CloseButton from './CloseButton'
@@ -11,23 +11,34 @@ interface ItemDetailModalProps {
   item?: Item
   defaultStatus?: ItemStatus
   defaultProjectId?: number
+  defaultSubProjectId?: number
+  defaultItemNr?: string
+  defaultTitle?: string
   projects: Project[]
+  subProjects: SubProject[]
   onClose: () => void
+  onCreated?: (item: Item) => void
 }
 
 export default function ItemDetailModal({
   item,
   defaultStatus,
   defaultProjectId,
+  defaultSubProjectId,
+  defaultItemNr,
+  defaultTitle,
   projects,
+  subProjects,
   onClose,
+  onCreated,
 }: ItemDetailModalProps) {
   const { t } = useTranslation()
   const isEdit = !!item
 
   const [projectId, setProjectId] = useState<number | ''>(item?.projectId ?? defaultProjectId ?? '')
-  const [itemNr, setItemNr] = useState(item?.itemNr ?? '')
-  const [title, setTitle] = useState(item?.title ?? '')
+  const [subProjectId, setSubProjectId] = useState<number | ''>(item?.subProjectId ?? defaultSubProjectId ?? '')
+  const [itemNr, setItemNr] = useState(item?.itemNr ?? defaultItemNr ?? '')
+  const [title, setTitle] = useState(item?.title ?? defaultTitle ?? '')
   const [description, setDescription] = useState(item?.description ?? '')
   const [status, setStatus] = useState<ItemStatus>(item?.status ?? defaultStatus ?? 'todo')
   const [estimatedHours, setEstimatedHours] = useState(minutesToHoursInput(item?.estimatedMinutes))
@@ -38,6 +49,12 @@ export default function ItemDetailModal({
   const [notesPreview, setNotesPreview] = useState(false)
 
   useEscapeKey(onClose)
+
+  function handleProjectIdChange(value: number | '') {
+    setProjectId(value)
+    const stillValid = subProjects.some((s) => s.id === subProjectId && s.projectId === value)
+    if (!stillValid) setSubProjectId('')
+  }
 
   function toggleInfoCollapsed() {
     setInfoCollapsed((prev) => {
@@ -56,6 +73,7 @@ export default function ItemDetailModal({
     if (isEdit && item?.id) {
       await db.items.update(item.id, {
         projectId: Number(projectId),
+        subProjectId: subProjectId ? Number(subProjectId) : undefined,
         itemNr: itemNr.trim(),
         title: title.trim(),
         description,
@@ -69,8 +87,9 @@ export default function ItemDetailModal({
       const existingItems = await db.items.where('status').equals(status).toArray()
       const maxSort = existingItems.reduce((max, i) => Math.max(max, i.sortOrder), 0)
 
-      await db.items.add({
+      const newItem = {
         projectId: Number(projectId),
+        subProjectId: subProjectId ? Number(subProjectId) : undefined,
         itemNr: itemNr.trim(),
         title: title.trim(),
         description,
@@ -81,7 +100,9 @@ export default function ItemDetailModal({
         sortOrder: maxSort + 1000,
         createdAt: now,
         updatedAt: now,
-      })
+      }
+      const insertedId = await db.items.add(newItem)
+      onCreated?.({ ...newItem, id: insertedId })
     }
     onClose()
   }
@@ -107,7 +128,10 @@ export default function ItemDetailModal({
           <ItemDetailForm
             projects={projects}
             projectId={projectId}
-            onProjectIdChange={setProjectId}
+            onProjectIdChange={handleProjectIdChange}
+            subProjects={subProjects}
+            subProjectId={subProjectId}
+            onSubProjectIdChange={setSubProjectId}
             itemNr={itemNr}
             onItemNrChange={setItemNr}
             title={title}

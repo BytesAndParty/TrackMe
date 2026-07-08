@@ -19,6 +19,8 @@ interface GridRowProps {
   onItemClick?: (item: Item) => void
   onDeleteRow: (rowKey: string) => void
   onProjectChange: (rowKey: string, value: string, currentSubProject: string) => void
+  onSubProjectChange: (rowKey: string, value: string) => void
+  onRequestCreateItem: (rowKey: string, value: string) => void
 }
 
 function computeDuration(row: GridRowData): string {
@@ -39,9 +41,20 @@ export const GridRow = React.memo(function GridRow({
   onItemClick,
   onDeleteRow,
   onProjectChange,
+  onSubProjectChange,
+  onRequestCreateItem,
 }: GridRowProps) {
   const { t } = useTranslation()
   const isEmptyNew = row._isNew && !row._dirty
+
+  const itemSuggestions = getItemSuggestions(row.project, row.subProject)
+  const trimmedItemNr = row.itemNr.trim()
+  const itemNrQuery = trimmedItemNr.toLowerCase()
+  const hasNoItemMatch =
+    trimmedItemNr !== '' &&
+    !itemSuggestions.some(
+      (s) => s.key.toLowerCase().includes(itemNrQuery) || s.name.toLowerCase().includes(itemNrQuery)
+    )
 
   return (
     <tr
@@ -85,6 +98,7 @@ export const GridRow = React.memo(function GridRow({
           rowKey={row._key}
           col={3}
           field="subProject"
+          onSubProjectChange={onSubProjectChange}
         />
       </td>
 
@@ -94,12 +108,26 @@ export const GridRow = React.memo(function GridRow({
           <div className="flex-1">
             <AutocompleteCell
               value={row.itemNr}
-              suggestions={getItemSuggestions(row.project, row.subProject)}
+              suggestions={itemSuggestions}
               rowKey={row._key}
               col={4}
               field="itemNr"
+              onCreateNew={(value) => onRequestCreateItem(row._key, value)}
             />
           </div>
+          {hasNoItemMatch && (
+            <button
+              type="button"
+              onClick={() => onRequestCreateItem(row._key, row.itemNr)}
+              className="opacity-0 group-hover:opacity-100 p-1 text-slate-300 dark:text-slate-600 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all shrink-0"
+              tabIndex={-1}
+              title={t('grid.createItem')}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+            </button>
+          )}
           {(() => {
             const itemUrl = buildItemUrl(row.itemNr, row.project)
             return itemUrl ? (

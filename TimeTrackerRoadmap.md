@@ -213,7 +213,20 @@ Ich möchte den Zeitraum mit den geleisteten Stunden einstellbar machen
 
 ## 14. Backlog (Stand 2026-07-08)
 
-Noch nicht umgesetzt – Sammlung offener Punkte aus aktueller Review-Session.
+Sammlung offener Punkte aus Review-Session. Umsetzung läuft.
+
+### Status
+
+| # | Punkt | Status |
+|---|-------|--------|
+| 14.1 | Design-Überarbeitung | 🔲 Offen (Scope ungeklärt) |
+| 14.2 | Day View Bugs | 🔲 Offen (Details ausstehend) |
+| 14.3 | Nav gruppieren | ✅ Erledigt |
+| 14.4 | Item-Erstellung ohne Auto-Create | ✅ Erledigt |
+| 14.5 | Default-Text ersetzen | ✅ Erledigt |
+| 14.6 | Papierkorb-Position | ✅ Erledigt |
+| 14.7 | Item-Vorschläge nach Subproject filtern | ✅ Erledigt |
+| 14.8 | Clear bei Subproject-Wechsel | ✅ Erledigt |
 
 ### 14.1 Design
 Aktuelles UI-Design ist nur ein erster Wurf und muss grundlegend überarbeitet werden. Scope/Richtung noch offen.

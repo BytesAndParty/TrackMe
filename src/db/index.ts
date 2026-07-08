@@ -43,6 +43,7 @@ export type ItemStatus = 'todo' | 'in_progress' | 'done'
 export interface Item {
   id?: number
   projectId: number
+  subProjectId?: number
   itemNr: string
   title: string
   description: string
@@ -128,6 +129,15 @@ db.version(6).stores({
   return tx.table('todoTasks').toCollection().modify(todo => {
     if (todo.title === undefined) todo.title = ''
   })
+})
+
+db.version(7).stores({
+  projects: '++id, key, name, active',
+  subProjects: '++id, projectId, key, name',
+  workItemLinks: '++id, itemId, projectId, subProjectId',
+  timeEntries: '++id, date, projectId, subProjectId, workItemLinkId, itemNr',
+  items: '++id, projectId, subProjectId, itemNr, status, sortOrder',
+  todoTasks: '++id, sortOrder, linkedItemId, createdAt',
 })
 
 export const PROJECT_COLORS = [

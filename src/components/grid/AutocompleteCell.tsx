@@ -16,6 +16,8 @@ interface AutocompleteCellProps {
   field: EditableField
   onProjectChange?: (rowKey: string, value: string, currentSubProject: string) => void
   currentSubProject?: string
+  onSubProjectChange?: (rowKey: string, value: string) => void
+  onCreateNew?: (value: string) => void
 }
 
 export default function AutocompleteCell({
@@ -26,6 +28,8 @@ export default function AutocompleteCell({
   field,
   onProjectChange,
   currentSubProject,
+  onSubProjectChange,
+  onCreateNew,
 }: AutocompleteCellProps) {
   const { registerCellRef, updateCell, markEditing, unmarkEditing } = useGridContext()
   const [open, setOpen] = useState(false)
@@ -40,6 +44,8 @@ export default function AutocompleteCell({
   function onChange(v: string) {
     if (onProjectChange) {
       onProjectChange(rowKey, v, currentSubProject ?? '')
+    } else if (onSubProjectChange) {
+      onSubProjectChange(rowKey, v)
     } else {
       updateCell(rowKey, field, v)
     }
@@ -118,6 +124,18 @@ export default function AutocompleteCell({
       if (e.key === 'Escape') {
         e.stopPropagation()
         setOpen(false)
+        return
+      }
+    }
+
+    // No matching suggestion: offer to create a new one instead of bubbling to grid Enter (commit+move)
+    if (e.key === 'Enter' && onCreateNew && filtered.length === 0) {
+      const trimmed = value.trim()
+      if (trimmed) {
+        e.preventDefault()
+        e.stopPropagation()
+        setOpen(false)
+        onCreateNew(trimmed)
         return
       }
     }

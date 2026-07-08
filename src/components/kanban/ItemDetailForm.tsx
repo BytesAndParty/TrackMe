@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { type ItemStatus, type Project } from '../../db'
+import { type ItemStatus, type Project, type SubProject } from '../../db'
 import MarkdownView from '../MarkdownView'
 import ProjectOptions from './ProjectOptions'
 
@@ -8,6 +8,9 @@ interface ItemDetailFormProps {
   projects: Project[]
   projectId: number | ''
   onProjectIdChange: (value: number | '') => void
+  subProjects: SubProject[]
+  subProjectId: number | ''
+  onSubProjectIdChange: (value: number | '') => void
   itemNr: string
   onItemNrChange: (value: string) => void
   title: string
@@ -38,6 +41,9 @@ export default function ItemDetailForm({
   projects,
   projectId,
   onProjectIdChange,
+  subProjects,
+  subProjectId,
+  onSubProjectIdChange,
   itemNr,
   onItemNrChange,
   title,
@@ -105,6 +111,27 @@ export default function ItemDetailForm({
               >
                 <option value="">{t('itemDetail.selectProject')}</option>
                 <ProjectOptions projects={projects} />
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+                {t('itemDetail.subProject')}
+              </label>
+              <select
+                value={subProjectId}
+                onChange={(e) => onSubProjectIdChange(e.target.value ? Number(e.target.value) : '')}
+                disabled={!projectId}
+                className={inputClass}
+              >
+                <option value="">{t('itemDetail.selectSubProject')}</option>
+                {subProjects
+                  .filter((s) => s.projectId === projectId)
+                  .map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.key} – {s.name}
+                    </option>
+                  ))}
               </select>
             </div>
 

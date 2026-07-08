@@ -5,6 +5,7 @@ import { calculateDuration, formatDuration } from '../../lib/parser'
 import { useTranslation } from 'react-i18next'
 import { GridProvider, type GridContextValue } from './GridContext'
 import { GridRow } from './GridRow'
+import ItemDetailModal from '../kanban/ItemDetailModal'
 
 const COLUMN_COUNT = 7
 
@@ -231,16 +232,11 @@ export default function EditableGrid({
       return projectItems.map((item) => ({ key: item.itemNr, name: item.title, id: item.id! }))
     }
 
-    const subProjectItemNrs = new Set(
-      entries
-        .filter((e) => e.projectId === project.id && e.subProjectId === subProject.id && e.itemNr)
-        .map((e) => e.itemNr)
-    )
-
-    const matching = projectItems.filter((item) => subProjectItemNrs.has(item.itemNr))
-    const rest = projectItems.filter((item) => !subProjectItemNrs.has(item.itemNr))
-    return [...matching, ...rest].map((item) => ({ key: item.itemNr, name: item.title, id: item.id! }))
-  }, [items, projects, subProjects, entries])
+    // Items without a subProjectId are unassigned and stay visible regardless of the selected subproject
+    return projectItems
+      .filter((item) => item.subProjectId === undefined || item.subProjectId === subProject.id)
+      .map((item) => ({ key: item.itemNr, name: item.title, id: item.id! }))
+  }, [items, projects, subProjects])
 
   const findItem = useCallback((itemNr: string, projectKey: string): Item | undefined => {
     if (!itemNr.trim()) return undefined
@@ -272,6 +268,40 @@ export default function EditableGrid({
       updateCell(rowKey, 'subProject', '')
     }
   }, [updateCell, projects, subProjects])
+
+  const handleSubProjectChange = useCallback((rowKey: string, value: string) => {
+    const row = rows.find((r) => r._key === rowKey)
+    const subProjectChanged = !!row && row.subProject.toLowerCase() !== value.toLowerCase()
+    updateCell(rowKey, 'subProject', value)
+    if (subProjectChanged && row?.itemNr.trim()) {
+      updateCell(rowKey, 'itemNr', '')
+      updateCell(rowKey, 'itemTitle', '')
+    }
+  }, [rows, updateCell])
+
+  const [createItemRequest, setCreateItemRequest] = useState<{ rowKey: string; value: string } | null>(null)
+
+  const handleRequestCreateItem = useCallback((rowKey: string, value: string) => {
+    setCreateItemRequest({ rowKey, value })
+  }, [setCreateItemRequest])
+
+  const handleItemCreated = useCallback((rowKey: string, item: Item) => {
+    updateCell(rowKey, 'itemNr', item.itemNr)
+    updateCell(rowKey, 'itemTitle', item.title)
+    setCreateItemRequest(null)
+    focusCell(rowKey, 4)
+  }, [updateCell])
+
+  const createItemRow = createItemRequest ? rows.find((r) => r._key === createItemRequest.rowKey) : undefined
+  const createItemProject = createItemRow
+    ? projects.find((p) => p.key.toLowerCase() === createItemRow.project.toLowerCase())
+    : undefined
+  const createItemSubProject = createItemProject
+    ? subProjects.find(
+        (s) => s.projectId === createItemProject.id && s.key.toLowerCase() === (createItemRow?.subProject ?? '').toLowerCase()
+      )
+    : undefined
+  const createItemValueIsNumeric = createItemRequest ? /^\d+$/.test(createItemRequest.value) : false
 
   return (
     <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-x-clip overflow-y-visible">
@@ -309,6 +339,8 @@ export default function EditableGrid({
                 onItemClick={onItemClick}
                 onDeleteRow={handleDeleteRow}
                 onProjectChange={handleProjectChange}
+                onSubProjectChange={handleSubProjectChange}
+                onRequestCreateItem={handleRequestCreateItem}
               />
             ))}
           </tbody>
@@ -368,6 +400,19 @@ export default function EditableGrid({
             {t('dayView.undoDelete')}
           </button>
         </div>
+      )}
+
+      {createItemRequest && (
+        <ItemDetailModal
+          projects={projects}
+          subProjects={subProjects}
+          defaultProjectId={createItemProject?.id}
+          defaultSubProjectId={createItemSubProject?.id}
+          defaultItemNr={createItemValueIsNumeric ? createItemRequest.value : ''}
+          defaultTitle={createItemValueIsNumeric ? '' : createItemRequest.value}
+          onCreated={(item) => handleItemCreated(createItemRequest.rowKey, item)}
+          onClose={() => setCreateItemRequest(null)}
+        />
       )}
     </div>
   )

@@ -56,40 +56,11 @@ export function useGridPersist(
     }
 
     let insertedId: number | undefined
-    await db.transaction('rw', [db.timeEntries, db.items], async () => {
-      // Auto-create item in Kanban if itemNr is new
-      if (row.itemNr.trim() && project) {
-        const existing = await db.items
-          .where('projectId')
-          .equals(project.id!)
-          .filter((i) => i.itemNr === row.itemNr.trim())
-          .first()
-
-        if (!existing) {
-          const now = new Date().toISOString()
-          const todoItems = await db.items.where('status').equals('todo').toArray()
-          const maxSort = todoItems.reduce((max, i) => Math.max(max, i.sortOrder), 0)
-          await db.items.add({
-            projectId: project.id!,
-            itemNr: row.itemNr.trim(),
-            title: row.itemTitle || row.taskText || `Item #${row.itemNr.trim()}`,
-            description: '',
-            status: 'todo',
-            url: '',
-            notes: '',
-            sortOrder: maxSort + 1000,
-            createdAt: now,
-            updatedAt: now,
-          })
-        }
-      }
-
-      if (row._id) {
-        await db.timeEntries.update(row._id, entryData)
-      } else {
-        insertedId = await db.timeEntries.add(entryData) as number
-      }
-    })
+    if (row._id) {
+      await db.timeEntries.update(row._id, entryData)
+    } else {
+      insertedId = await db.timeEntries.add(entryData) as number
+    }
 
     updateRows((prev) => {
       const idx = prev.findIndex((r) => r._key === rowKey)

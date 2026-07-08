@@ -1,4 +1,5 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useTheme } from '../hooks/useTheme'
 import { useTranslation } from 'react-i18next'
 import { useHotkey } from '@tanstack/react-hotkeys'
@@ -6,13 +7,37 @@ import ShortcutOverlay from './ShortcutOverlay'
 
 const navItems = [
   { to: '/', key: 'layout.nav.day', icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
-  { to: '/week', key: 'layout.nav.week', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' },
-  { to: '/month', key: 'layout.nav.month', icon: 'M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6z' },
-  { to: '/reports', key: 'layout.nav.reports', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
   { to: '/items', key: 'layout.nav.items', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01' },
   { to: '/todo', key: 'layout.nav.todo', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 11l2 2 4-4M9 17h6' },
   { to: '/projects', key: 'layout.nav.projects', icon: 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z' },
 ]
+
+const analyticsItems = [
+  { to: '/week', key: 'layout.nav.week', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' },
+  { to: '/month', key: 'layout.nav.month', icon: 'M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6z' },
+  { to: '/reports', key: 'layout.nav.reports', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
+]
+
+function TopNavLink({ to, end, icon, label }: { to: string; end?: boolean; icon: string; label: string }) {
+  return (
+    <NavLink
+      to={to}
+      end={end}
+      className={({ isActive }) =>
+        `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+          isActive
+            ? 'bg-white/15 text-white'
+            : 'text-slate-400 hover:text-white hover:bg-white/5'
+        }`
+      }
+    >
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d={icon} />
+      </svg>
+      <span className="hidden sm:inline">{label}</span>
+    </NavLink>
+  )
+}
 
 const themeIcons = {
   light: (
@@ -40,9 +65,28 @@ export default function Layout() {
   const { theme, cycleTheme } = useTheme()
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
+  const location = useLocation()
   const nextLanguage = i18n.resolvedLanguage === 'en' ? 'de' : 'en'
 
+  const [analyticsOpen, setAnalyticsOpen] = useState(false)
+  const analyticsRef = useRef<HTMLDivElement>(null)
+  const isAnalyticsActive = analyticsItems.some((item) => item.to === location.pathname)
+
   useHotkey('Mod+K', () => navigate('/projects'), { meta: { name: t('layout.nav.projects') } })
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- close dropdown on navigation
+  useEffect(() => { setAnalyticsOpen(false) }, [location.pathname])
+
+  useEffect(() => {
+    if (!analyticsOpen) return
+    function handleClickOutside(e: MouseEvent) {
+      if (analyticsRef.current && !analyticsRef.current.contains(e.target as Node)) {
+        setAnalyticsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [analyticsOpen])
 
   const themeLabels = {
     light: t('layout.theme.light'),
@@ -71,24 +115,53 @@ export default function Layout() {
             </div>
             <div className="flex items-center gap-1">
               <nav className="flex gap-0.5">
-                {navItems.map((item) => (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    end={item.to === '/'}
-                    className={({ isActive }) =>
-                      `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                        isActive
-                          ? 'bg-white/15 text-white'
-                          : 'text-slate-400 hover:text-white hover:bg-white/5'
-                      }`
-                    }
+                {navItems.slice(0, 1).map((item) => (
+                  <TopNavLink key={item.to} to={item.to} end={item.to === '/'} icon={item.icon} label={t(item.key)} />
+                ))}
+
+                <div className="relative" ref={analyticsRef}>
+                  <button
+                    type="button"
+                    onClick={() => setAnalyticsOpen((v) => !v)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                      isAnalyticsActive || analyticsOpen
+                        ? 'bg-white/15 text-white'
+                        : 'text-slate-400 hover:text-white hover:bg-white/5'
+                    }`}
                   >
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d={item.icon} />
+                      <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                     </svg>
-                    <span className="hidden sm:inline">{t(item.key)}</span>
-                  </NavLink>
+                    <span className="hidden sm:inline">{t('layout.nav.analytics')}</span>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform ${analyticsOpen ? 'rotate-180' : ''}`}>
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  </button>
+
+                  {analyticsOpen && (
+                    <div className="absolute left-0 top-full mt-1 w-44 bg-slate-800 border border-white/10 rounded-lg shadow-lg py-1 z-50">
+                      {analyticsItems.map((item) => (
+                        <NavLink
+                          key={item.to}
+                          to={item.to}
+                          className={({ isActive }) =>
+                            `flex items-center gap-2 px-3 py-2 text-sm font-medium transition-colors ${
+                              isActive ? 'text-white bg-white/10' : 'text-slate-300 hover:text-white hover:bg-white/5'
+                            }`
+                          }
+                        >
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d={item.icon} />
+                          </svg>
+                          {t(item.key)}
+                        </NavLink>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {navItems.slice(1).map((item) => (
+                  <TopNavLink key={item.to} to={item.to} icon={item.icon} label={t(item.key)} />
                 ))}
               </nav>
               <div className="ml-2 border-l border-white/10 pl-2">

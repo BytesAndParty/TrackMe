@@ -30,6 +30,7 @@ export default function ItemDetailOverlay({ itemId: propItemId, onClose: propOnC
   const item = useLiveQuery(() => (numericId ? db.items.get(numericId) : undefined), [numericId])
 
   const projects = useLiveQuery(() => db.projects.toArray()) ?? []
+  const subProjects = useLiveQuery(() => db.subProjects.toArray()) ?? []
 
   const timeEntries =
     useLiveQuery(() => {
@@ -44,6 +45,7 @@ export default function ItemDetailOverlay({ itemId: propItemId, onClose: propOnC
   const totalMinutes = timeEntries.reduce((sum, e) => sum + e.durationMinutes, 0)
 
   const [projectId, setProjectId] = useState<number | ''>('')
+  const [subProjectId, setSubProjectId] = useState<number | ''>('')
   const [itemNr, setItemNr] = useState('')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -61,6 +63,7 @@ export default function ItemDetailOverlay({ itemId: propItemId, onClose: propOnC
   useEffect(() => {
     if (item) {
       setProjectId(item.projectId)
+      setSubProjectId(item.subProjectId ?? '')
       setItemNr(item.itemNr)
       setTitle(item.title)
       setDescription(item.description)
@@ -82,11 +85,18 @@ export default function ItemDetailOverlay({ itemId: propItemId, onClose: propOnC
 
   useEscapeKey(close)
 
+  function handleProjectIdChange(value: number | '') {
+    setProjectId(value)
+    const stillValid = subProjects.some((s) => s.id === subProjectId && s.projectId === value)
+    if (!stillValid) setSubProjectId('')
+  }
+
   async function handleSave() {
     if (!item?.id || !projectId || !title.trim()) return
     const estimatedMinutes = parseEstimatedMinutes(estimatedHours)
     await db.items.update(item.id, {
       projectId: Number(projectId),
+      subProjectId: subProjectId ? Number(subProjectId) : undefined,
       itemNr: itemNr.trim(),
       title: title.trim(),
       description,
@@ -134,7 +144,10 @@ export default function ItemDetailOverlay({ itemId: propItemId, onClose: propOnC
           <ItemDetailForm
             projects={projects}
             projectId={projectId}
-            onProjectIdChange={setProjectId}
+            onProjectIdChange={handleProjectIdChange}
+            subProjects={subProjects}
+            subProjectId={subProjectId}
+            onSubProjectIdChange={setSubProjectId}
             itemNr={itemNr}
             onItemNrChange={setItemNr}
             title={title}
