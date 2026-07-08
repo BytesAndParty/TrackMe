@@ -2,10 +2,9 @@ import { type TimeEntry, type Project, type SubProject, type Item } from '../db'
 import { useGridEditing } from './useGridEditing'
 import { useGridRows, createEmptyRow, type GridRowData, type EditableField } from './useGridRows'
 import { useGridPersist } from './useGridPersist'
-import { useAutoSave, type SaveStatus } from './useAutoSave'
+import { useAutoSave } from './useAutoSave'
 
-export type { GridRowData, EditableField, SaveStatus }
-export { createEmptyRow }
+export type { GridRowData }
 
 export function useGridState(
   date: string,

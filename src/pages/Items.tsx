@@ -6,6 +6,7 @@ import { db, type ItemStatus } from '../db'
 import { useHotkey } from '@tanstack/react-hotkeys'
 import KanbanBoard from '../components/kanban/KanbanBoard'
 import ItemDetailModal from '../components/kanban/ItemDetailModal'
+import ProjectOptions from '../components/kanban/ProjectOptions'
 
 export default function Items() {
   const { t } = useTranslation()
@@ -70,13 +71,7 @@ export default function Items() {
           className="text-sm border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-900/10 dark:focus:ring-slate-100/10"
         >
           <option value="">{t('items.allProjects')}</option>
-          {projects
-            .filter((p) => p.active)
-            .map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.key} – {p.name}
-              </option>
-            ))}
+          <ProjectOptions projects={projects} />
         </select>
       </div>
 

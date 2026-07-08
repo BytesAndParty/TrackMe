@@ -3,6 +3,7 @@ import { db } from '../db'
 import { getWeekDates, formatDateShort, formatDuration, todayISO, toLocalISO } from '../lib/parser'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { useProjectSubProjectLists } from '../hooks/useProjectSubProjectLists'
 
 export default function WeekView() {
   const { t } = useTranslation()
@@ -38,8 +39,7 @@ export default function WeekView() {
     [weekDates[0], weekDates[6]]
   ) ?? []
 
-  const projects = useLiveQuery(() => db.projects.toArray()) ?? []
-  const subProjects = useLiveQuery(() => db.subProjects.toArray()) ?? []
+  const { projects, subProjects } = useProjectSubProjectLists()
 
   // Group entries by project+subproject, then by day
   type RowKey = string

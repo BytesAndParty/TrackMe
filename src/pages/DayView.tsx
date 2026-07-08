@@ -15,6 +15,7 @@ import EditableGrid from "../components/grid/EditableGrid";
 import WelcomeBanner from "../components/WelcomeBanner";
 import ItemDetailOverlay from "../components/kanban/ItemDetailOverlay";
 import { type GridRowData } from "../hooks/useGridRows";
+import { useProjectSubProjectLists } from "../hooks/useProjectSubProjectLists";
 
 function formatHoursDecimal(minutes: number): string {
 	return (minutes / 60).toFixed(2)
@@ -46,8 +47,7 @@ export default function DayView() {
 			[selectedDate]
 		) ?? [];
 
-	const projects = useLiveQuery(() => db.projects.toArray()) ?? [];
-	const subProjects = useLiveQuery(() => db.subProjects.toArray()) ?? [];
+	const { projects, subProjects } = useProjectSubProjectLists();
 	const items = useLiveQuery(() => db.items.toArray()) ?? [];
 	const allEntryCount = useLiveQuery(() => db.timeEntries.count()) ?? 0;
 

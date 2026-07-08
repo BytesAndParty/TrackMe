@@ -40,7 +40,7 @@ export function createEmptyRow(): GridRowData {
   }
 }
 
-export function entryToRow(entry: TimeEntry, projects: Project[], subProjects: SubProject[], items: Item[], existingKey?: string): GridRowData {
+function entryToRow(entry: TimeEntry, projects: Project[], subProjects: SubProject[], items: Item[], existingKey?: string): GridRowData {
   const project = projects.find((p) => p.id === entry.projectId)
   const item = project && entry.itemNr ? items.find((i) => i.projectId === project.id && i.itemNr === entry.itemNr) : undefined
 
@@ -72,7 +72,7 @@ export function rowContentEqual(a: GridRowData, b: GridRowData): boolean {
   )
 }
 
-export function normalizeKey(value: string): string {
+function normalizeKey(value: string): string {
   return value.trim().toLowerCase()
 }
 

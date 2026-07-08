@@ -16,7 +16,7 @@ export interface SubProject {
   name: string
 }
 
-export interface WorkItemLink {
+interface WorkItemLink {
   id?: number
   itemId: string
   url: string

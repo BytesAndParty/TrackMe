@@ -2,6 +2,7 @@ import { type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { type ItemStatus, type Project } from '../../db'
 import MarkdownView from '../MarkdownView'
+import ProjectOptions from './ProjectOptions'
 
 interface ItemDetailFormProps {
   projects: Project[]
@@ -103,13 +104,7 @@ export default function ItemDetailForm({
                 className={inputClass}
               >
                 <option value="">{t('itemDetail.selectProject')}</option>
-                {projects
-                  .filter((p) => p.active)
-                  .map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.key} – {p.name}
-                    </option>
-                  ))}
+                <ProjectOptions projects={projects} />
               </select>
             </div>
 
