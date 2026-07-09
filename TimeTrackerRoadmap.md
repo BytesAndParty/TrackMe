@@ -234,6 +234,8 @@ Aktuelles UI-Design ist nur ein erster Wurf und muss grundlegend überarbeitet w
 ### 14.2 Day View – Bugs bei Anzeige & Speichern
 Es gibt noch Bugs in der Day View, die Anzeige und Speichern betreffen. **Konkrete Symptome/Repro-Schritte stehen noch aus.**
 
+**Bekannte Konsolen-Warnung (kein Bug, bewusst ignoriert):** "Cannot update a component (ShortcutOverlay) while rendering a different component (...)". Ursache liegt in `@tanstack/react-hotkeys@0.10.0` selbst (`useHotkey.js` ruft `setOptions` synchron im Render statt in einem Effect auf, das schreibt in den von `ShortcutOverlay` abonnierten Store). Bereits neueste verfügbare Version, kein Fix upstream. Reine Dev-Mode-Warnung ohne funktionale Auswirkung, verschwindet im Production-Build. Fix würde ein Patchen von node_modules erfordern – bewusst nicht gemacht.
+
 ### 14.3 Navigation aufräumen
 Week-, Month- und Reports-View werden kaum genutzt. Diese unter einem gemeinsamen Nav-Reiter gruppieren statt als eigene Top-Level-Einträge (betrifft `Layout.tsx`).
 

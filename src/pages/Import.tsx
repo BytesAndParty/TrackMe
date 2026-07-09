@@ -2,15 +2,23 @@ import { useState, useMemo } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useTranslation } from 'react-i18next'
+import { z } from 'zod'
 import { db } from '../db'
 
-interface SharedProject {
-  key: string
-  name: string
-  color?: string
-  linkTemplate?: string
-  subProjects?: { key: string; name: string }[]
-}
+const sharedProjectSchema = z.object({
+  key: z.string().min(1),
+  name: z.string().min(1),
+  color: z.string().optional(),
+  linkTemplate: z.string().optional(),
+  subProjects: z
+    .array(
+      z.object({
+        key: z.string().min(1),
+        name: z.string().min(1),
+      })
+    )
+    .optional(),
+})
 
 export default function Import() {
   const { t } = useTranslation()
@@ -25,14 +33,17 @@ export default function Import() {
   const { parsed, errorKey: parseErrorKey } = useMemo(() => {
     const data = searchParams.get('data')
     if (!data) return { parsed: null, errorKey: 'noDataError' as const }
+
+    let json: unknown
     try {
-      const json = atob(data)
-      const project = JSON.parse(json) as SharedProject
-      if (!project.key || !project.name) return { parsed: null, errorKey: 'invalidDataError' as const }
-      return { parsed: project, errorKey: null }
+      json = JSON.parse(atob(data))
     } catch {
       return { parsed: null, errorKey: 'decodeError' as const }
     }
+
+    const result = sharedProjectSchema.safeParse(json)
+    if (!result.success) return { parsed: null, errorKey: 'invalidDataError' as const }
+    return { parsed: result.data, errorKey: null }
   }, [searchParams])
 
   const errorKey = importError ? 'importError' : parseErrorKey
