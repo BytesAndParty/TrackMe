@@ -1,4 +1,4 @@
-import { type Item, type Project } from '../../db'
+import { type Item, type ItemType, type Project } from '../../db'
 import { formatDuration } from '../../lib/parser'
 import { useTranslation } from 'react-i18next'
 
@@ -7,6 +7,12 @@ interface KanbanCardProps {
   project?: Project
   onClick: () => void
   timeMinutes: number
+}
+
+const typeBadgeClass: Record<ItemType, string> = {
+  task: 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400',
+  bug: 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400',
+  requirement: 'bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400',
 }
 
 export default function KanbanCard({ item, project, onClick, timeMinutes }: KanbanCardProps) {
@@ -26,6 +32,9 @@ export default function KanbanCard({ item, project, onClick, timeMinutes }: Kanb
       className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 p-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
     >
       <div className="flex items-center gap-2 mb-1.5">
+        <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${typeBadgeClass[item.type]}`}>
+          {t(`itemDetail.type.${item.type}`)}
+        </span>
         <span className="font-mono text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded">
           #{item.itemNr}
         </span>

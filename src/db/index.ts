@@ -39,6 +39,7 @@ export interface TimeEntry {
 }
 
 export type ItemStatus = 'todo' | 'in_progress' | 'done'
+export type ItemType = 'task' | 'bug' | 'requirement'
 
 export interface Item {
   id?: number
@@ -49,6 +50,7 @@ export interface Item {
   description: string
   estimatedMinutes?: number // original estimate in minutes
   status: ItemStatus
+  type: ItemType
   url: string
   notes: string
   sortOrder: number
@@ -138,6 +140,19 @@ db.version(7).stores({
   timeEntries: '++id, date, projectId, subProjectId, workItemLinkId, itemNr',
   items: '++id, projectId, subProjectId, itemNr, status, sortOrder',
   todoTasks: '++id, sortOrder, linkedItemId, createdAt',
+})
+
+db.version(8).stores({
+  projects: '++id, key, name, active',
+  subProjects: '++id, projectId, key, name',
+  workItemLinks: '++id, itemId, projectId, subProjectId',
+  timeEntries: '++id, date, projectId, subProjectId, workItemLinkId, itemNr',
+  items: '++id, projectId, subProjectId, itemNr, status, type, sortOrder',
+  todoTasks: '++id, sortOrder, linkedItemId, createdAt',
+}).upgrade(tx => {
+  return tx.table('items').toCollection().modify(item => {
+    if (item.type === undefined) item.type = 'task'
+  })
 })
 
 export const PROJECT_COLORS = [

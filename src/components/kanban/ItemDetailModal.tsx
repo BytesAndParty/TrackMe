@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { db, type Item, type ItemStatus, type Project, type SubProject } from '../../db'
+import { db, type Item, type ItemStatus, type ItemType, type Project, type SubProject } from '../../db'
 import ItemDetailForm from './ItemDetailForm'
 import ItemDetailFooter from './ItemDetailFooter'
 import CloseButton from './CloseButton'
@@ -40,6 +40,7 @@ export default function ItemDetailModal({
   const [itemNr, setItemNr] = useState(item?.itemNr ?? defaultItemNr ?? '')
   const [title, setTitle] = useState(item?.title ?? defaultTitle ?? '')
   const [description, setDescription] = useState(item?.description ?? '')
+  const [type, setType] = useState<ItemType>(item?.type ?? 'task')
   const [status, setStatus] = useState<ItemStatus>(item?.status ?? defaultStatus ?? 'todo')
   const [estimatedHours, setEstimatedHours] = useState(minutesToHoursInput(item?.estimatedMinutes))
   const [url, setUrl] = useState(item?.url ?? '')
@@ -77,6 +78,7 @@ export default function ItemDetailModal({
         itemNr: itemNr.trim(),
         title: title.trim(),
         description,
+        type,
         status,
         estimatedMinutes,
         url: url.trim(),
@@ -93,6 +95,7 @@ export default function ItemDetailModal({
         itemNr: itemNr.trim(),
         title: title.trim(),
         description,
+        type,
         status,
         estimatedMinutes,
         url: url.trim(),
@@ -138,6 +141,8 @@ export default function ItemDetailModal({
             onTitleChange={setTitle}
             description={description}
             onDescriptionChange={setDescription}
+            type={type}
+            onTypeChange={setType}
             status={status}
             onStatusChange={setStatus}
             estimatedHours={estimatedHours}

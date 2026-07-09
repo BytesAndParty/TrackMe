@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useTranslation } from 'react-i18next'
-import { db, type ItemStatus } from '../../db'
+import { db, type ItemStatus, type ItemType } from '../../db'
 import { formatDuration, formatDateShort } from '../../lib/parser'
 import ItemDetailForm from './ItemDetailForm'
 import ItemDetailFooter from './ItemDetailFooter'
@@ -49,6 +49,7 @@ export default function ItemDetailOverlay({ itemId: propItemId, onClose: propOnC
   const [itemNr, setItemNr] = useState('')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
+  const [type, setType] = useState<ItemType>('task')
   const [status, setStatus] = useState<ItemStatus>('todo')
   const [estimatedHours, setEstimatedHours] = useState('')
   const [url, setUrl] = useState('')
@@ -67,6 +68,7 @@ export default function ItemDetailOverlay({ itemId: propItemId, onClose: propOnC
       setItemNr(item.itemNr)
       setTitle(item.title)
       setDescription(item.description)
+      setType(item.type)
       setStatus(item.status)
       setEstimatedHours(minutesToHoursInput(item.estimatedMinutes))
       setUrl(item.url)
@@ -100,6 +102,7 @@ export default function ItemDetailOverlay({ itemId: propItemId, onClose: propOnC
       itemNr: itemNr.trim(),
       title: title.trim(),
       description,
+      type,
       status,
       estimatedMinutes,
       url: url.trim(),
@@ -154,6 +157,8 @@ export default function ItemDetailOverlay({ itemId: propItemId, onClose: propOnC
             onTitleChange={setTitle}
             description={description}
             onDescriptionChange={setDescription}
+            type={type}
+            onTypeChange={setType}
             status={status}
             onStatusChange={setStatus}
             estimatedHours={estimatedHours}

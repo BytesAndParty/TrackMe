@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { type ItemStatus, type Project, type SubProject } from '../../db'
+import { type ItemStatus, type ItemType, type Project, type SubProject } from '../../db'
 import MarkdownView from '../MarkdownView'
 import ProjectOptions from './ProjectOptions'
 
@@ -17,6 +17,8 @@ interface ItemDetailFormProps {
   onTitleChange: (value: string) => void
   description: string
   onDescriptionChange: (value: string) => void
+  type: ItemType
+  onTypeChange: (value: ItemType) => void
   status: ItemStatus
   onStatusChange: (value: ItemStatus) => void
   estimatedHours: string
@@ -50,6 +52,8 @@ export default function ItemDetailForm({
   onTitleChange,
   description,
   onDescriptionChange,
+  type,
+  onTypeChange,
   status,
   onStatusChange,
   estimatedHours,
@@ -72,6 +76,12 @@ export default function ItemDetailForm({
     todo: t('itemDetail.status.todo'),
     in_progress: t('itemDetail.status.in_progress'),
     done: t('itemDetail.status.done'),
+  }
+
+  const typeLabels: Record<ItemType, string> = {
+    task: t('itemDetail.type.task'),
+    bug: t('itemDetail.type.bug'),
+    requirement: t('itemDetail.type.requirement'),
   }
 
   return (
@@ -135,7 +145,7 @@ export default function ItemDetailForm({
               </select>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
                   {t('itemDetail.itemNr')}
@@ -147,6 +157,22 @@ export default function ItemDetailForm({
                   placeholder={t('itemDetail.itemNrPlaceholder')}
                   className={`${inputClass} font-mono`}
                 />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+                  {t('itemDetail.typeLabel')}
+                </label>
+                <select
+                  value={type}
+                  onChange={(e) => onTypeChange(e.target.value as ItemType)}
+                  className={inputClass}
+                >
+                  {(Object.entries(typeLabels) as [ItemType, string][]).map(([key, label]) => (
+                    <option key={key} value={key}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
