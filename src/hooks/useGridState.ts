@@ -32,12 +32,11 @@ export function useGridState(
       // Handle bidirectional sync between itemNr and itemTitle
       if (field === 'itemNr') {
         const project = projects.find((p) => p.key.toLowerCase() === row.project.toLowerCase())
-        if (project) {
-          const item = items.find((i) => i.projectId === project.id && i.itemNr === value.trim())
-          if (item) {
-            row.itemTitle = item.title
-          }
-        }
+        const item = project
+          ? items.find((i) => i.projectId === project.id && i.itemNr === value.trim())
+          : undefined
+        // Titel darf nur befuellt sein, wenn ein Item wirklich gesetzt ist
+        row.itemTitle = item ? item.title : ''
       } else if (field === 'itemTitle') {
         const project = projects.find((p) => p.key.toLowerCase() === row.project.toLowerCase())
         if (project) {
