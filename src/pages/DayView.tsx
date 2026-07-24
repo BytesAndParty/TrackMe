@@ -31,6 +31,9 @@ export default function DayView() {
 		const dateParam = searchParams.get("date");
 		if (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam))
 			return dateParam;
+		const stored = localStorage.getItem("dayview-last-date");
+		if (stored && /^\d{4}-\d{2}-\d{2}$/.test(stored))
+			return stored;
 		return todayISO();
 	});
 
@@ -209,6 +212,7 @@ export default function DayView() {
 	}, [liveRows, entries, projects, subProjects, items, t]);
 
 	useEffect(() => {
+		localStorage.setItem("dayview-last-date", selectedDate);
 		const current = searchParams.get("date");
 		if (selectedDate === todayISO()) {
 			if (current) setSearchParams({}, { replace: true });
