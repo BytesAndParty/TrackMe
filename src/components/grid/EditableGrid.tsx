@@ -6,6 +6,8 @@ import { useTranslation } from 'react-i18next'
 import { GridProvider, type GridContextValue } from './GridContext'
 import { GridRow } from './GridRow'
 import ItemDetailModal from '../kanban/ItemDetailModal'
+import ProjectCreateModal from '../kanban/ProjectCreateModal'
+import SubProjectCreateModal from '../kanban/SubProjectCreateModal'
 
 const COLUMN_COUNT = 7
 
@@ -254,6 +256,12 @@ export default function EditableGrid({
     return project.linkTemplate.replace('{itemNr}', itemNr.trim())
   }, [projects])
 
+  const findProjectByKey = useCallback((projectKey: string): Project | undefined => {
+    const trimmed = projectKey.trim().toLowerCase()
+    if (!trimmed) return undefined
+    return projects.find((p) => p.key.toLowerCase() === trimmed)
+  }, [projects])
+
   const handleProjectChange = useCallback((rowKey: string, value: string, currentSubProject: string) => {
     updateCell(rowKey, 'project', value)
     const currentProject = projects.find(
@@ -303,6 +311,32 @@ export default function EditableGrid({
     : undefined
   const createItemValueIsNumeric = createItemRequest ? /^\d+$/.test(createItemRequest.value) : false
 
+  const [createProjectRequest, setCreateProjectRequest] = useState<{ rowKey: string; value: string } | null>(null)
+  const [createSubProjectRequest, setCreateSubProjectRequest] = useState<{ rowKey: string; value: string; projectId: number; projectName: string } | null>(null)
+
+  const handleRequestCreateProject = useCallback((rowKey: string, value: string) => {
+    setCreateProjectRequest({ rowKey, value })
+  }, [setCreateProjectRequest])
+
+  const handleRequestCreateSubProject = useCallback((rowKey: string, value: string) => {
+    const row = rows.find((r) => r._key === rowKey)
+    const project = row ? findProjectByKey(row.project) : undefined
+    if (!project) return
+    setCreateSubProjectRequest({ rowKey, value, projectId: project.id!, projectName: project.name })
+  }, [rows, findProjectByKey, setCreateSubProjectRequest])
+
+  const handleProjectCreated = useCallback((rowKey: string, project: Project) => {
+    updateCell(rowKey, 'project', project.key)
+    setCreateProjectRequest(null)
+    focusCell(rowKey, 2)
+  }, [updateCell])
+
+  const handleSubProjectCreated = useCallback((rowKey: string, subProject: SubProject) => {
+    updateCell(rowKey, 'subProject', subProject.key)
+    setCreateSubProjectRequest(null)
+    focusCell(rowKey, 3)
+  }, [updateCell])
+
   return (
     <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-x-clip overflow-y-visible">
       {overlapHintCount > 0 && (
@@ -341,6 +375,9 @@ export default function EditableGrid({
                 onProjectChange={handleProjectChange}
                 onSubProjectChange={handleSubProjectChange}
                 onRequestCreateItem={handleRequestCreateItem}
+                onRequestCreateProject={handleRequestCreateProject}
+                onRequestCreateSubProject={handleRequestCreateSubProject}
+                findProjectByKey={findProjectByKey}
               />
             ))}
           </tbody>
@@ -412,6 +449,35 @@ export default function EditableGrid({
           defaultTitle={createItemValueIsNumeric ? '' : createItemRequest.value}
           onCreated={(item) => handleItemCreated(createItemRequest.rowKey, item)}
           onClose={() => setCreateItemRequest(null)}
+        />
+      )}
+
+      {createProjectRequest && (
+        <ProjectCreateModal
+          defaultKey={createProjectRequest.value}
+          onCreated={(project) => handleProjectCreated(createProjectRequest.rowKey, project)}
+          onClose={() => {
+            // Cancel: revert the unresolved project text so the cell reflects what is
+            // actually persisted (an unmatched key resolves to no id and would be lost on reload).
+            updateCell(createProjectRequest.rowKey, 'project', '')
+            focusCell(createProjectRequest.rowKey, 2)
+            setCreateProjectRequest(null)
+          }}
+        />
+      )}
+
+      {createSubProjectRequest && (
+        <SubProjectCreateModal
+          projectId={createSubProjectRequest.projectId}
+          projectName={createSubProjectRequest.projectName}
+          defaultKey={createSubProjectRequest.value}
+          onCreated={(subProject) => handleSubProjectCreated(createSubProjectRequest.rowKey, subProject)}
+          onClose={() => {
+            // Cancel: revert the unresolved sub-project text (see project note above).
+            updateCell(createSubProjectRequest.rowKey, 'subProject', '')
+            focusCell(createSubProjectRequest.rowKey, 3)
+            setCreateSubProjectRequest(null)
+          }}
         />
       )}
     </div>

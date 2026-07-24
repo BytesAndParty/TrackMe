@@ -51,24 +51,28 @@ export default function AutocompleteCell({
     }
   }
 
+  const query = value.trim().toLowerCase()
   const filtered = value
     ? suggestions
         .filter(
           (s) =>
-            s.key.toLowerCase().includes(value.toLowerCase()) ||
-            s.name.toLowerCase().includes(value.toLowerCase())
+            s.key.toLowerCase().includes(query) ||
+            s.name.toLowerCase().includes(query)
         )
         .sort((a, b) => {
-          const q = value.toLowerCase()
           const rank = (s: Suggestion) => {
-            if (s.key.toLowerCase().startsWith(q)) return 0
-            if (s.name.toLowerCase().startsWith(q)) return 1
-            if (s.key.toLowerCase().includes(q)) return 2
+            if (s.key.toLowerCase().startsWith(query)) return 0
+            if (s.name.toLowerCase().startsWith(query)) return 1
+            if (s.key.toLowerCase().includes(query)) return 2
             return 3
           }
           return rank(a) - rank(b)
         })
     : suggestions
+
+  // A new (non-matching) value that we can offer to create: no partial suggestion matched.
+  // Uses the trimmed query so it stays consistent with GridRow's "+" button gating.
+  const canCreate = !!onCreateNew && query !== '' && filtered.length === 0
 
   // eslint-disable-next-line react-hooks/set-state-in-effect -- reset dropdown highlight on input change
   useEffect(() => { setHighlightIndex(0) }, [value])
@@ -83,7 +87,7 @@ export default function AutocompleteCell({
     if (e.key === 'Tab' && !e.shiftKey) {
       if (filtered.length > 0 && value.length > 0) {
         const exactMatch = filtered.find(
-          (s) => s.key.toLowerCase() === value.toLowerCase()
+          (s) => s.key.toLowerCase() === query
         )
         if (!exactMatch) {
           // Partial match: auto-complete to top suggestion, stay in field
@@ -128,16 +132,22 @@ export default function AutocompleteCell({
       }
     }
 
+    // Escape on a new value: clear it and stay in the field — no create modal, no commit.
+    if (e.key === 'Escape' && canCreate) {
+      e.preventDefault()
+      e.stopPropagation()
+      setOpen(false)
+      onChange('')
+      return
+    }
+
     // No matching suggestion: offer to create a new one instead of bubbling to grid Enter (commit+move)
-    if (e.key === 'Enter' && onCreateNew && filtered.length === 0) {
-      const trimmed = value.trim()
-      if (trimmed) {
-        e.preventDefault()
-        e.stopPropagation()
-        setOpen(false)
-        onCreateNew(trimmed)
-        return
-      }
+    if (e.key === 'Enter' && canCreate) {
+      e.preventDefault()
+      e.stopPropagation()
+      setOpen(false)
+      onCreateNew!(value.trim())
+      return
     }
     // all other keys: bubble to grid handler
   }
@@ -147,6 +157,13 @@ export default function AutocompleteCell({
     if (containerRef.current?.contains(e.relatedTarget as Node)) return
     setOpen(false)
     unmarkEditing(rowKey)
+    // Don't auto-create when focus moves to a row action control (the "+"/link/delete
+    // buttons, all tabIndex={-1}); their own onClick handles the intent. This avoids
+    // e.g. clicking the item link also popping the create modal.
+    const related = e.relatedTarget as HTMLElement | null
+    if (related && related.tabIndex === -1) return
+    // Leaving the field with a new, non-matching value → offer to create it.
+    if (canCreate) onCreateNew!(value.trim())
   }
 
   return (

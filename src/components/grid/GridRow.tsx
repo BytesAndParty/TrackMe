@@ -1,6 +1,6 @@
 import React from 'react'
 import { type GridRowData } from '../../hooks/useGridRows'
-import { type Item } from '../../db'
+import { type Item, type Project } from '../../db'
 import { type Suggestion } from './AutocompleteCell'
 import { calculateDuration, formatDuration } from '../../lib/parser'
 import { useTranslation } from 'react-i18next'
@@ -21,6 +21,9 @@ interface GridRowProps {
   onProjectChange: (rowKey: string, value: string, currentSubProject: string) => void
   onSubProjectChange: (rowKey: string, value: string) => void
   onRequestCreateItem: (rowKey: string, value: string) => void
+  onRequestCreateProject: (rowKey: string, value: string) => void
+  onRequestCreateSubProject: (rowKey: string, value: string) => void
+  findProjectByKey: (projectKey: string) => Project | undefined
 }
 
 function computeDuration(row: GridRowData): string {
@@ -43,9 +46,31 @@ export const GridRow = React.memo(function GridRow({
   onProjectChange,
   onSubProjectChange,
   onRequestCreateItem,
+  onRequestCreateProject,
+  onRequestCreateSubProject,
+  findProjectByKey,
 }: GridRowProps) {
   const { t } = useTranslation()
   const isEmptyNew = row._isNew && !row._dirty
+
+  const trimmedProject = row.project.trim()
+  const projectQuery = trimmedProject.toLowerCase()
+  const hasNoProjectMatch =
+    trimmedProject !== '' &&
+    !projectSuggestions.some(
+      (s) => s.key.toLowerCase().includes(projectQuery) || s.name.toLowerCase().includes(projectQuery)
+    )
+
+  const rowProject = findProjectByKey(row.project)
+  const subProjectSuggestions = getSubProjectSuggestions(row.project)
+  const trimmedSubProject = row.subProject.trim()
+  const subProjectQuery = trimmedSubProject.toLowerCase()
+  const hasNoSubProjectMatch =
+    !!rowProject &&
+    trimmedSubProject !== '' &&
+    !subProjectSuggestions.some(
+      (s) => s.key.toLowerCase().includes(subProjectQuery) || s.name.toLowerCase().includes(subProjectQuery)
+    )
 
   const itemSuggestions = getItemSuggestions(row.project, row.subProject)
   const trimmedItemNr = row.itemNr.trim()
@@ -79,27 +104,63 @@ export const GridRow = React.memo(function GridRow({
 
       {/* Project */}
       <td className="grid-cell" data-row-key={row._key} data-col={2}>
-        <AutocompleteCell
-          value={row.project}
-          suggestions={projectSuggestions}
-          rowKey={row._key}
-          col={2}
-          field="project"
-          onProjectChange={onProjectChange}
-          currentSubProject={row.subProject}
-        />
+        <div className="flex items-center">
+          <div className="flex-1">
+            <AutocompleteCell
+              value={row.project}
+              suggestions={projectSuggestions}
+              rowKey={row._key}
+              col={2}
+              field="project"
+              onProjectChange={onProjectChange}
+              currentSubProject={row.subProject}
+              onCreateNew={(value) => onRequestCreateProject(row._key, value)}
+            />
+          </div>
+          {hasNoProjectMatch && (
+            <button
+              type="button"
+              onClick={() => onRequestCreateProject(row._key, row.project)}
+              className="opacity-0 group-hover:opacity-100 p-1 text-slate-300 dark:text-slate-600 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all shrink-0"
+              tabIndex={-1}
+              title={t('grid.createProject')}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+            </button>
+          )}
+        </div>
       </td>
 
       {/* SubProject */}
       <td className="grid-cell" data-row-key={row._key} data-col={3}>
-        <AutocompleteCell
-          value={row.subProject}
-          suggestions={getSubProjectSuggestions(row.project)}
-          rowKey={row._key}
-          col={3}
-          field="subProject"
-          onSubProjectChange={onSubProjectChange}
-        />
+        <div className="flex items-center">
+          <div className="flex-1">
+            <AutocompleteCell
+              value={row.subProject}
+              suggestions={subProjectSuggestions}
+              rowKey={row._key}
+              col={3}
+              field="subProject"
+              onSubProjectChange={onSubProjectChange}
+              onCreateNew={rowProject ? (value) => onRequestCreateSubProject(row._key, value) : undefined}
+            />
+          </div>
+          {hasNoSubProjectMatch && (
+            <button
+              type="button"
+              onClick={() => onRequestCreateSubProject(row._key, row.subProject)}
+              className="opacity-0 group-hover:opacity-100 p-1 text-slate-300 dark:text-slate-600 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all shrink-0"
+              tabIndex={-1}
+              title={t('grid.createSubProject')}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+            </button>
+          )}
+        </div>
       </td>
 
       {/* Item Nr */}

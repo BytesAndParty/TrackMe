@@ -131,6 +131,13 @@ const resources = {
         remove: 'Entfernen',
         subProjectAdd: '+ Unterprojekt',
       },
+      projectCreate: {
+        title: 'Neues Projekt',
+      },
+      subProjectCreate: {
+        title: 'Neues Unterprojekt',
+        forProject: 'für {{project}}',
+      },
       items: {
         allProjects: 'Alle Projekte',
         noProjectsHint: 'Erstelle zuerst ein Projekt, um Items anlegen zu können.',
@@ -178,6 +185,8 @@ const resources = {
         openInAzure: 'In Azure DevOps öffnen',
         openItem: 'Item öffnen',
         createItem: 'Neues Item anlegen',
+        createProject: 'Neues Projekt anlegen',
+        createSubProject: 'Neues Unterprojekt anlegen',
         descriptionPlaceholder: 'Beschreibung...',
         hint: 'Hinweis',
         saving: 'Speichern...',
@@ -385,6 +394,13 @@ const resources = {
         remove: 'Remove',
         subProjectAdd: '+ Sub-project',
       },
+      projectCreate: {
+        title: 'New project',
+      },
+      subProjectCreate: {
+        title: 'New sub-project',
+        forProject: 'for {{project}}',
+      },
       items: {
         allProjects: 'All projects',
         noProjectsHint: 'Create a project first so you can add items.',
@@ -432,6 +448,8 @@ const resources = {
         openInAzure: 'Open in Azure DevOps',
         openItem: 'Open item',
         createItem: 'Create new item',
+        createProject: 'Create new project',
+        createSubProject: 'Create new sub-project',
         descriptionPlaceholder: 'Description...',
         hint: 'Note',
         saving: 'Saving...',
