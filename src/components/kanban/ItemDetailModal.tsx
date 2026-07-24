@@ -47,6 +47,7 @@ export default function ItemDetailModal({
   const [notes, setNotes] = useState(item?.notes ?? '')
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [infoCollapsed, setInfoCollapsed] = useState(() => localStorage.getItem('itemDetailInfoCollapsed') === 'true')
+  const [notesCollapsed, setNotesCollapsed] = useState(() => !(item?.notes ?? '').trim())
   const [notesPreview, setNotesPreview] = useState(false)
 
   useEscapeKey(onClose)
@@ -63,6 +64,10 @@ export default function ItemDetailModal({
       localStorage.setItem('itemDetailInfoCollapsed', String(next))
       return next
     })
+  }
+
+  function toggleNotesCollapsed() {
+    setNotesCollapsed((prev) => !prev)
   }
 
   async function handleSave() {
@@ -121,13 +126,13 @@ export default function ItemDetailModal({
     <div className="fixed inset-0 z-100 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/30 dark:bg-black/50" onClick={onClose} />
 
-      <div className="relative bg-white dark:bg-slate-900 rounded-xl shadow-xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+      <div className="relative bg-white dark:bg-slate-900 rounded-xl shadow-xl w-full max-w-3xl mx-4 max-h-[90vh] flex flex-col overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between shrink-0">
           <h2 className="text-lg font-bold">{isEdit ? t('itemDetail.editItem') : t('itemDetail.newItem')}</h2>
           <CloseButton onClick={onClose} />
         </div>
 
-        <div className="px-6 py-4 space-y-6">
+        <div className="px-6 py-4 space-y-6 overflow-y-auto flex-1">
           <ItemDetailForm
             projects={projects}
             projectId={projectId}
@@ -153,6 +158,8 @@ export default function ItemDetailModal({
             onNotesChange={setNotes}
             infoCollapsed={infoCollapsed}
             onToggleInfoCollapsed={toggleInfoCollapsed}
+            notesCollapsed={notesCollapsed}
+            onToggleNotesCollapsed={toggleNotesCollapsed}
             notesPreview={notesPreview}
             onToggleNotesPreview={() => setNotesPreview(!notesPreview)}
             notesRows={16}
@@ -168,6 +175,7 @@ export default function ItemDetailModal({
           onCancel={onClose}
           onSave={handleSave}
           saveDisabled={!projectId || !title.trim()}
+          className="shrink-0"
         />
       </div>
     </div>

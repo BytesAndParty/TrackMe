@@ -58,6 +58,7 @@ export default function ItemDetailOverlay({ itemId: propItemId, onClose: propOnC
   const [infoCollapsed, setInfoCollapsed] = useState(
     () => localStorage.getItem('itemDetailInfoCollapsed') === 'true'
   )
+  const [notesCollapsed, setNotesCollapsed] = useState(true)
   const [notesPreview, setNotesPreview] = useState(false)
 
   /* eslint-disable react-hooks/set-state-in-effect -- sync form state from async live query */
@@ -73,6 +74,7 @@ export default function ItemDetailOverlay({ itemId: propItemId, onClose: propOnC
       setEstimatedHours(minutesToHoursInput(item.estimatedMinutes))
       setUrl(item.url)
       setNotes(item.notes)
+      setNotesCollapsed(!item.notes?.trim())
     }
   }, [item])
   /* eslint-enable react-hooks/set-state-in-effect */
@@ -127,6 +129,10 @@ export default function ItemDetailOverlay({ itemId: propItemId, onClose: propOnC
     })
   }
 
+  function toggleNotesCollapsed() {
+    setNotesCollapsed((prev) => !prev)
+  }
+
   if (!item) return null
 
   const estimatedMinutes = item.estimatedMinutes ?? 0
@@ -169,6 +175,8 @@ export default function ItemDetailOverlay({ itemId: propItemId, onClose: propOnC
             onNotesChange={setNotes}
             infoCollapsed={infoCollapsed}
             onToggleInfoCollapsed={toggleInfoCollapsed}
+            notesCollapsed={notesCollapsed}
+            onToggleNotesCollapsed={toggleNotesCollapsed}
             notesPreview={notesPreview}
             onToggleNotesPreview={() => setNotesPreview(!notesPreview)}
             afterNotes={

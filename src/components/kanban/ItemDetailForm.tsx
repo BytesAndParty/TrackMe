@@ -29,6 +29,8 @@ interface ItemDetailFormProps {
   onNotesChange: (value: string) => void
   infoCollapsed: boolean
   onToggleInfoCollapsed: () => void
+  notesCollapsed: boolean
+  onToggleNotesCollapsed: () => void
   notesPreview: boolean
   onToggleNotesPreview: () => void
   notesRows?: number
@@ -64,6 +66,8 @@ export default function ItemDetailForm({
   onNotesChange,
   infoCollapsed,
   onToggleInfoCollapsed,
+  notesCollapsed,
+  onToggleNotesCollapsed,
   notesPreview,
   onToggleNotesPreview,
   notesRows = 12,
@@ -251,44 +255,65 @@ export default function ItemDetailForm({
 
       <div>
         <div className="flex items-center justify-between mb-1">
-          <label className="block text-xs font-medium text-slate-500 dark:text-slate-400">
-            {t('itemDetail.notes')}
-          </label>
           <button
             type="button"
-            onClick={onToggleNotesPreview}
-            className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-            title={notesPreview ? t('common.edit') : t('common.preview')}
+            onClick={onToggleNotesCollapsed}
+            className="flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
           >
-            {notesPreview ? (
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                <path d="m15 5 4 4" />
-              </svg>
-            ) : (
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" />
-                <circle cx="12" cy="12" r="3" />
-              </svg>
-            )}
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={`transition-transform ${notesCollapsed ? '-rotate-90' : ''}`}
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+            {t('itemDetail.notes')}
           </button>
+          {!notesCollapsed && (
+            <button
+              type="button"
+              onClick={onToggleNotesPreview}
+              className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+              title={notesPreview ? t('common.edit') : t('common.preview')}
+            >
+              {notesPreview ? (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                  <path d="m15 5 4 4" />
+                </svg>
+              ) : (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              )}
+            </button>
+          )}
         </div>
-        {notesPreview ? (
-          <div className={`${notesPreviewMinHeightClass} border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 bg-white dark:bg-slate-800`}>
-            {notes.trim() ? (
-              <MarkdownView content={notes} />
-            ) : (
-              <p className="text-sm text-slate-400 dark:text-slate-500 italic">{t('common.noNotes')}</p>
-            )}
-          </div>
-        ) : (
-          <textarea
-            value={notes}
-            onChange={(e) => onNotesChange(e.target.value)}
-            rows={notesRows}
-            placeholder={t('itemDetail.notesPlaceholder')}
-            className={`${inputClass} resize-none`}
-          />
+        {!notesCollapsed && (
+          notesPreview ? (
+            <div className={`${notesPreviewMinHeightClass} border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 bg-white dark:bg-slate-800`}>
+              {notes.trim() ? (
+                <MarkdownView content={notes} />
+              ) : (
+                <p className="text-sm text-slate-400 dark:text-slate-500 italic">{t('common.noNotes')}</p>
+              )}
+            </div>
+          ) : (
+            <textarea
+              value={notes}
+              onChange={(e) => onNotesChange(e.target.value)}
+              rows={notesRows}
+              placeholder={t('itemDetail.notesPlaceholder')}
+              className={`${inputClass} resize-none`}
+            />
+          )
         )}
       </div>
 
