@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useTheme } from '../hooks/useTheme'
+import { useStoragePersistence } from '../hooks/useStoragePersistence'
 import { useTranslation } from 'react-i18next'
 import { useHotkey } from '@tanstack/react-hotkeys'
 import ShortcutOverlay from './ShortcutOverlay'
@@ -63,6 +64,7 @@ const themeIcons = {
 
 export default function Layout() {
   const { theme, cycleTheme } = useTheme()
+  const storageStatus = useStoragePersistence()
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const location = useLocation()
@@ -166,6 +168,31 @@ export default function Layout() {
               </nav>
               <div className="ml-2 border-l border-white/10 pl-2">
                 <div className="flex items-center gap-1">
+                  {storageStatus === 'persisted' && (
+                    <span
+                      className="flex items-center px-1.5 py-1.5 text-emerald-400"
+                      title={t('storage.persisted')}
+                      aria-label={t('storage.persisted')}
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                        <polyline points="9 12 11 14 15 10" />
+                      </svg>
+                    </span>
+                  )}
+                  {storageStatus === 'best-effort' && (
+                    <span
+                      className="flex items-center px-1.5 py-1.5 text-amber-400"
+                      title={t('storage.bestEffort')}
+                      aria-label={t('storage.bestEffort')}
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                        <line x1="12" y1="9" x2="12" y2="13" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                      </svg>
+                    </span>
+                  )}
                   <button
                     onClick={toggleLanguage}
                     className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all text-xs font-semibold tracking-wide"

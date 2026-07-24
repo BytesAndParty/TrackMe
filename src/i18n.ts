@@ -43,6 +43,10 @@ const resources = {
         preview: 'Vorschau',
         noNotes: 'Keine Notizen vorhanden.',
       },
+      storage: {
+        persisted: 'Daten dauerhaft im Browser gesichert',
+        bestEffort: 'Achtung: Der Browser kann die Daten bei Speicherplatzmangel löschen',
+      },
       dayView: {
         prevDayAria: 'Vorheriger Tag',
         nextDayAria: 'Nächster Tag',
@@ -292,6 +296,10 @@ const resources = {
         edit: 'Edit',
         preview: 'Preview',
         noNotes: 'No notes available.',
+      },
+      storage: {
+        persisted: 'Data is stored persistently in this browser',
+        bestEffort: 'Warning: the browser may evict your data under storage pressure',
       },
       dayView: {
         prevDayAria: 'Previous day',
