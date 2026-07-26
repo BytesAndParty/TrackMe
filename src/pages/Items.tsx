@@ -21,9 +21,9 @@ export default function Items() {
   const items = useLiveQuery(
     () => {
       if (filterProjectId) {
-        return db.items.where('projectId').equals(filterProjectId).sortBy('sortOrder')
+        return db.items.where('projectId').equals(filterProjectId).filter((item) => !item.archived).sortBy('sortOrder')
       }
-      return db.items.orderBy('sortOrder').toArray()
+      return db.items.filter((item) => !item.archived).sortBy('sortOrder')
     },
     [filterProjectId]
   ) ?? []
@@ -47,7 +47,7 @@ export default function Items() {
   useHotkey('N', () => setCreatingWithStatus('todo'), { meta: { name: t('kanban.newItem') } })
 
   async function handleDelete(itemId: number) {
-    await db.items.delete(itemId)
+    await db.items.update(itemId, { archived: true, updatedAt: new Date().toISOString() })
   }
 
   async function handleDrop(itemId: number, newStatus: ItemStatus) {

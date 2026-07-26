@@ -54,6 +54,7 @@ export default function ItemDetailOverlay({ itemId: propItemId, onClose: propOnC
   const [estimatedHours, setEstimatedHours] = useState('')
   const [url, setUrl] = useState('')
   const [notes, setNotes] = useState('')
+  const [saveError, setSaveError] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [infoCollapsed, setInfoCollapsed] = useState(
     () => localStorage.getItem('itemDetailInfoCollapsed') === 'true'
@@ -98,10 +99,23 @@ export default function ItemDetailOverlay({ itemId: propItemId, onClose: propOnC
   async function handleSave() {
     if (!item?.id || !projectId || !title.trim()) return
     const estimatedMinutes = parseEstimatedMinutes(estimatedHours)
+    const normalizedItemNr = itemNr.trim()
+    if (normalizedItemNr) {
+      const duplicate = await db.items
+        .where('projectId')
+        .equals(Number(projectId))
+        .filter((candidate) => candidate.id !== item.id && candidate.itemNr === normalizedItemNr)
+        .first()
+      if (duplicate) {
+        setSaveError(t('itemDetail.duplicateItemNr'))
+        return
+      }
+    }
+    setSaveError('')
     await db.items.update(item.id, {
       projectId: Number(projectId),
       subProjectId: subProjectId ? Number(subProjectId) : undefined,
-      itemNr: itemNr.trim(),
+      itemNr: normalizedItemNr,
       title: title.trim(),
       description,
       type,
@@ -116,7 +130,7 @@ export default function ItemDetailOverlay({ itemId: propItemId, onClose: propOnC
 
   async function handleDelete() {
     if (item?.id) {
-      await db.items.delete(item.id)
+      await db.items.update(item.id, { archived: true, updatedAt: new Date().toISOString() })
       close()
     }
   }
@@ -272,6 +286,7 @@ export default function ItemDetailOverlay({ itemId: propItemId, onClose: propOnC
               </div>
             }
           />
+          {saveError && <p className="text-sm text-red-600 dark:text-red-400">{saveError}</p>}
         </div>
 
         <ItemDetailFooter

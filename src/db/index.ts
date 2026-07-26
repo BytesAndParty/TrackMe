@@ -14,9 +14,10 @@ export interface SubProject {
   projectId: number
   key: string
   name: string
+  active: boolean
 }
 
-interface WorkItemLink {
+export interface WorkItemLink {
   id?: number
   itemId: string
   url: string
@@ -50,6 +51,7 @@ export interface Item {
   description: string
   estimatedMinutes?: number // original estimate in minutes
   status: ItemStatus
+  archived: boolean
   type: ItemType
   url: string
   notes: string
@@ -153,6 +155,24 @@ db.version(8).stores({
   return tx.table('items').toCollection().modify(item => {
     if (item.type === undefined) item.type = 'task'
   })
+})
+
+db.version(9).stores({
+  projects: '++id, key, name, active',
+  subProjects: '++id, projectId, key, name, active',
+  workItemLinks: '++id, itemId, projectId, subProjectId',
+  timeEntries: '++id, date, projectId, subProjectId, workItemLinkId, itemNr',
+  items: '++id, projectId, subProjectId, itemNr, status, archived, sortOrder',
+  todoTasks: '++id, sortOrder, linkedItemId, createdAt',
+}).upgrade(tx => {
+  return Promise.all([
+    tx.table('subProjects').toCollection().modify(subProject => {
+      if (subProject.active === undefined) subProject.active = true
+    }),
+    tx.table('items').toCollection().modify(item => {
+      if (item.archived === undefined) item.archived = false
+    }),
+  ])
 })
 
 export const PROJECT_COLORS = [

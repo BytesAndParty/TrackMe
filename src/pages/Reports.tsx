@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useEffectEvent, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useTranslation } from 'react-i18next'
@@ -87,8 +87,10 @@ export default function Reports() {
   const [customFrom, setCustomFrom] = useState(dateFrom)
   const [customTo, setCustomTo] = useState(dateTo)
 
-  const allEntries = useLiveQuery(() => db.timeEntries.toArray()) ?? []
-  const entries = allEntries.filter(e => e.date >= dateFrom && e.date <= dateTo)
+  const entries = useLiveQuery(
+    () => db.timeEntries.where('date').between(dateFrom, dateTo, true, true).toArray(),
+    [dateFrom, dateTo]
+  ) ?? []
   const projects = useLiveQuery(() => db.projects.toArray()) ?? []
   const subProjects = useLiveQuery(() => db.subProjects.toArray()) ?? []
 
@@ -277,6 +279,10 @@ export default function Reports() {
     setSearchParams({ from, to }, { replace: true })
   }
 
+  const selectPresetFromKeyboard = useEffectEvent((nextPreset: RangePreset) => {
+    selectPreset(nextPreset)
+  })
+
   // Tab / Shift+Tab to cycle presets (only when no input is focused)
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -287,9 +293,9 @@ export default function Reports() {
       const keys = PRESET_KEYS
       const idx = keys.indexOf(preset)
       if (e.shiftKey) {
-        selectPreset(keys[(idx - 1 + keys.length) % keys.length])
+        selectPresetFromKeyboard(keys[(idx - 1 + keys.length) % keys.length])
       } else {
-        selectPreset(keys[(idx + 1) % keys.length])
+        selectPresetFromKeyboard(keys[(idx + 1) % keys.length])
       }
     }
     window.addEventListener('keydown', handleKeyDown)

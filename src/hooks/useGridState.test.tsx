@@ -1,5 +1,5 @@
-import { renderHook, act, waitFor } from '@testing-library/react'
-import { describe, expect, it, beforeEach, vi } from 'vitest'
+import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useGridState } from './useGridState'
 import { type TimeEntry, type Project, type SubProject } from '../db'
 
@@ -54,12 +54,17 @@ describe('useGridState', () => {
     vi.clearAllMocks()
   })
 
+  afterEach(() => {
+    cleanup()
+  })
+
   it('deduplicates concurrent commit calls for a new row', async () => {
     const { result } = renderHook(() => useGridState('2026-02-11', [], [], []))
     const rowKey = result.current.rows[0]._key
 
     act(() => {
       result.current.updateCell(rowKey, 'startTime', '09:00')
+      result.current.updateCell(rowKey, 'endTime', '10:00')
     })
 
     await act(async () => {
@@ -120,6 +125,7 @@ describe('useGridState', () => {
 
     act(() => {
       result.current.updateCell(rowKey, 'startTime', '09:00')
+      result.current.updateCell(rowKey, 'endTime', '10:00')
       result.current.updateCell(rowKey, 'project', 'abc')
     })
 
@@ -154,5 +160,59 @@ describe('useGridState', () => {
       vi.runOnlyPendingTimers()
       vi.useRealTimers()
     }
+  })
+
+  it('does not persist incomplete or invalid time ranges', async () => {
+    vi.useFakeTimers()
+    try {
+      const { result } = renderHook(() => useGridState('2026-02-11', [], [], []))
+      const rowKey = result.current.rows[0]._key
+
+      act(() => {
+        result.current.updateCell(rowKey, 'startTime', '10:00')
+      })
+      await act(async () => {
+        await result.current.commitRow(rowKey)
+      })
+
+      act(() => {
+        result.current.updateCell(rowKey, 'endTime', '09:00')
+      })
+      await act(async () => {
+        await result.current.commitRow(rowKey)
+      })
+
+      expect(mocks.timeEntriesAdd).not.toHaveBeenCalled()
+    } finally {
+      vi.runOnlyPendingTimers()
+      vi.useRealTimers()
+    }
+  })
+
+  it('blocks overlapping changes when committing all rows', async () => {
+    const existingEntry: TimeEntry = {
+      id: 7,
+      date: '2026-02-11',
+      startTime: '09:00',
+      endTime: '10:00',
+      durationMinutes: 60,
+      itemNr: '',
+      taskText: '',
+      notes: '',
+    }
+    const { result } = renderHook(() => useGridState('2026-02-11', [existingEntry], [], []))
+    const newRow = result.current.rows.find((row) => row._isNew)!
+
+    act(() => {
+      result.current.updateCell(newRow._key, 'startTime', '09:30')
+      result.current.updateCell(newRow._key, 'endTime', '10:30')
+    })
+
+    await act(async () => {
+      expect(await result.current.commitAllDirty()).toBe(false)
+    })
+
+    expect(mocks.timeEntriesAdd).not.toHaveBeenCalled()
+    expect(result.current.saveStatus).toBe('error')
   })
 })

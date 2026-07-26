@@ -11,6 +11,7 @@ const navItems = [
   { to: '/items', key: 'layout.nav.items', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01' },
   { to: '/todo', key: 'layout.nav.todo', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 11l2 2 4-4M9 17h6' },
   { to: '/projects', key: 'layout.nav.projects', icon: 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z' },
+  { to: '/data', key: 'layout.nav.data', icon: 'M4 4h16v16H4zM8 2v4m8-4v4M8 12h8m-8 4h5' },
 ]
 
 const analyticsItems = [

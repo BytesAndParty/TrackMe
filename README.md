@@ -1,73 +1,47 @@
-# React + TypeScript + Vite
+# TrackMe
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+TrackMe ist eine lokale Zeiterfassung als Progressive Web App. Projekte, Unterprojekte, Zeitbuchungen, Items und Todos werden im Browser in IndexedDB gespeichert. Es ist kein Server und kein Benutzerkonto erforderlich.
 
-Currently, two official plugins are available:
+## Funktionen
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Tages-, Wochen- und Monatsansichten für Zeitbuchungen
+- Projekt- und Unterprojektverwaltung mit Archivierung
+- Kanban-Board für Items und verknüpfte Todos
+- Auswertungen für frei wählbare Zeiträume
+- JSON-Vollbackups sowie CSV-/XLSX-Export und -Import von Zeitbuchungen
 
-## React Compiler
+## Voraussetzungen
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- Aktuelle Version von [Bun](https://bun.sh/)
 
-## Expanding the ESLint configuration
+## Lokale Entwicklung
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+bun install
+bun run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Qualitätssicherung
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+bun run test
+bun run lint
+bun run build
 ```
+
+`bun run test` verwendet Vitest. `bun test` startet stattdessen den Bun-Test-Runner und ist für diese Tests nicht vorgesehen.
+
+## Daten und Backups
+
+Die Daten liegen ausschließlich in der IndexedDB des aktuellen Browsers. Browserdaten zu löschen oder ein anderes Browserprofil zu verwenden entfernt den Zugriff auf diese Daten.
+
+Unter **Daten** kann ein versioniertes JSON-Vollbackup erstellt und wiederhergestellt werden. Vor Browserwechseln, Updates oder umfangreichen Importen sollte ein Vollbackup exportiert werden. Der CSV-/XLSX-Import prüft Datum und Zeitbereiche, überspringt Duplikate und legt unbekannte Projekte sowie Unterprojekte an.
+
+Zeitbuchungen werden nur gespeichert, wenn Start- und Endzeit vorhanden sind und die Endzeit nach der Startzeit liegt. Zeiträume über Mitternacht werden nicht unterstützt.
+
+## Datenmodell
+
+- Projekte und Unterprojekte werden archiviert statt physisch gelöscht.
+- Items werden archiviert, damit Zeitbuchungen und Todo-Verknüpfungen erhalten bleiben.
+- Projektkürzel sind eindeutig; Unterprojektkürzel sind innerhalb eines Projekts eindeutig.
+- Änderungen am IndexedDB-Schema erfolgen ausschließlich als neue Dexie-Version mit Migration für bestehende Datensätze.

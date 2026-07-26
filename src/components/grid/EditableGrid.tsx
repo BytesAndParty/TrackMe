@@ -205,23 +205,23 @@ export default function EditableGrid({
     const project = projects.find((p) => p.key.toLowerCase() === projectKey.toLowerCase())
     if (!project) return []
     return subProjects
-      .filter((s) => s.projectId === project.id)
+      .filter((s) => s.projectId === project.id && s.active)
       .map((s) => ({ key: s.key, name: s.name, id: s.id! }))
   }, [projects, subProjects])
 
   const getItemSuggestions = useCallback((projectKey: string, subProjectKey: string) => {
     if (!projectKey) {
       return items
-        .filter((i) => i.status !== 'done')
+        .filter((i) => i.status !== 'done' && !i.archived)
         .map((item) => ({ key: item.itemNr, name: item.title, id: item.id! }))
     }
     const project = projects.find((p) => p.key.toLowerCase() === projectKey.toLowerCase())
     if (!project) {
       return items
-        .filter((i) => i.status !== 'done')
+        .filter((i) => i.status !== 'done' && !i.archived)
         .map((item) => ({ key: item.itemNr, name: item.title, id: item.id! }))
     }
-    const projectItems = items.filter((item) => item.projectId === project.id && item.status !== 'done')
+    const projectItems = items.filter((item) => item.projectId === project.id && item.status !== 'done' && !item.archived)
 
     if (!subProjectKey) {
       return projectItems.map((item) => ({ key: item.itemNr, name: item.title, id: item.id! }))

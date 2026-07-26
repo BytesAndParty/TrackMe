@@ -45,6 +45,7 @@ export default function ItemDetailModal({
   const [estimatedHours, setEstimatedHours] = useState(minutesToHoursInput(item?.estimatedMinutes))
   const [url, setUrl] = useState(item?.url ?? '')
   const [notes, setNotes] = useState(item?.notes ?? '')
+  const [saveError, setSaveError] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [infoCollapsed, setInfoCollapsed] = useState(() => localStorage.getItem('itemDetailInfoCollapsed') === 'true')
   const [notesCollapsed, setNotesCollapsed] = useState(() => !(item?.notes ?? '').trim())
@@ -75,12 +76,25 @@ export default function ItemDetailModal({
 
     const now = new Date().toISOString()
     const estimatedMinutes = parseEstimatedMinutes(estimatedHours)
+    const normalizedItemNr = itemNr.trim()
+    if (normalizedItemNr) {
+      const duplicate = await db.items
+        .where('projectId')
+        .equals(Number(projectId))
+        .filter((candidate) => candidate.id !== item?.id && candidate.itemNr === normalizedItemNr)
+        .first()
+      if (duplicate) {
+        setSaveError(t('itemDetail.duplicateItemNr'))
+        return
+      }
+    }
+    setSaveError('')
 
     if (isEdit && item?.id) {
       await db.items.update(item.id, {
         projectId: Number(projectId),
         subProjectId: subProjectId ? Number(subProjectId) : undefined,
-        itemNr: itemNr.trim(),
+        itemNr: normalizedItemNr,
         title: title.trim(),
         description,
         type,
@@ -97,11 +111,12 @@ export default function ItemDetailModal({
       const newItem = {
         projectId: Number(projectId),
         subProjectId: subProjectId ? Number(subProjectId) : undefined,
-        itemNr: itemNr.trim(),
+        itemNr: normalizedItemNr,
         title: title.trim(),
         description,
         type,
         status,
+        archived: false,
         estimatedMinutes,
         url: url.trim(),
         notes,
@@ -117,7 +132,7 @@ export default function ItemDetailModal({
 
   async function handleDelete() {
     if (item?.id) {
-      await db.items.delete(item.id)
+      await db.items.update(item.id, { archived: true, updatedAt: new Date().toISOString() })
       onClose()
     }
   }
@@ -165,6 +180,7 @@ export default function ItemDetailModal({
             notesRows={16}
             notesPreviewMinHeightClass="min-h-[240px]"
           />
+          {saveError && <p className="text-sm text-red-600 dark:text-red-400">{saveError}</p>}
         </div>
 
         <ItemDetailFooter

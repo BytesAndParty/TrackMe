@@ -3,6 +3,20 @@ import { db, type Project, type SubProject } from '../db'
 import { calculateDuration } from '../lib/parser'
 import { type GridRowData, rowContentEqual, dedupeRowsById, createEmptyRow } from './useGridRows'
 
+function hasValidTimeRange(row: GridRowData) {
+  return Boolean(row.startTime && row.endTime && calculateDuration(row.startTime, row.endTime) > 0)
+}
+
+function overlapsAnotherRow(row: GridRowData, rows: GridRowData[]) {
+  return rows.some(
+    (other) =>
+      other._key !== row._key &&
+      hasValidTimeRange(other) &&
+      row.startTime < other.endTime &&
+      other.startTime < row.endTime
+  )
+}
+
 export function useGridPersist(
   date: string,
   projects: Project[],
@@ -19,8 +33,7 @@ export function useGridPersist(
     const row = rowsRef.current[rowIndex]
     if (!row._dirty) return
 
-    // Need at least a start time to save
-    if (!row.startTime) return
+    if (!hasValidTimeRange(row) || overlapsAnotherRow(row, rowsRef.current)) return
 
     // Mark row as pending commit to prevent duplicate creation during DB sync
     if (!row._id) {
@@ -40,14 +53,13 @@ export function useGridPersist(
         )
       : undefined
 
-    const duration =
-      row.startTime && row.endTime ? calculateDuration(row.startTime, row.endTime) : 0
+    const duration = calculateDuration(row.startTime, row.endTime)
 
     const entryData = {
       date,
       startTime: row.startTime,
       endTime: row.endTime,
-      durationMinutes: Math.max(0, duration),
+      durationMinutes: duration,
       projectId: project?.id,
       subProjectId: subProject?.id,
       itemNr: row.itemNr,
@@ -93,15 +105,27 @@ export function useGridPersist(
   }, [runCommitRow])
 
   const commitAllDirty = useCallback(async (setSaveStatus: (s: 'saved' | 'saving' | 'error') => void): Promise<boolean> => {
-    const dirtyRows = rowsRef.current.filter((r) => r._dirty && r.startTime)
+    const dirtyRows = rowsRef.current.filter((row) => row._dirty)
     if (dirtyRows.length === 0) {
+      setSaveStatus('saved')
+      return true
+    }
+
+    const rowsWithTimeInput = dirtyRows.filter((row) => row.startTime || row.endTime)
+    if (rowsWithTimeInput.some((row) => !hasValidTimeRange(row) || overlapsAnotherRow(row, rowsRef.current))) {
+      setSaveStatus('error')
+      return false
+    }
+
+    const rowsToCommit = rowsWithTimeInput.filter(hasValidTimeRange)
+    if (rowsToCommit.length === 0) {
       setSaveStatus('saved')
       return true
     }
 
     setSaveStatus('saving')
     try {
-      await Promise.all(dirtyRows.map((r) => commitRow(r._key)))
+      await Promise.all(rowsToCommit.map((row) => commitRow(row._key)))
       setSaveStatus('saved')
       return true
     } catch (e) {

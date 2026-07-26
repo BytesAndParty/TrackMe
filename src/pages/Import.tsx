@@ -47,10 +47,12 @@ export default function Import() {
   }, [searchParams])
 
   const errorKey = importError ? 'importError' : parseErrorKey
-  const duplicate = parsed ? existingProjects.some(p => p.key === parsed.key) : false
+  const duplicate = parsed
+    ? existingProjects.some((project) => project.key.toLowerCase() === parsed.key.toLowerCase())
+    : false
 
   async function handleImport() {
-    if (!parsed) return
+    if (!parsed || duplicate) return
     setImporting(true)
     try {
       const projectId = await db.projects.add({
@@ -66,6 +68,7 @@ export default function Import() {
             projectId: projectId as number,
             key: sub.key,
             name: sub.name,
+            active: true,
           })
         }
       }
@@ -108,7 +111,7 @@ export default function Import() {
       {duplicate && (
         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
           <p className="text-sm text-amber-700 dark:text-amber-400">
-            {t('import.duplicateWarning', { key: parsed.key })}
+            {t('import.duplicateBlocked', { key: parsed.key })}
           </p>
         </div>
       )}
@@ -155,7 +158,7 @@ export default function Import() {
       <div className="flex gap-3">
         <button
           onClick={handleImport}
-          disabled={importing}
+          disabled={importing || duplicate}
           className="px-4 py-2 text-sm font-medium text-white bg-slate-900 dark:bg-slate-100 dark:text-slate-900 rounded-lg hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {importing ? t('import.importing') : t('import.import')}

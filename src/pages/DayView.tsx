@@ -40,18 +40,19 @@ export default function DayView() {
 	// State for live grid data to update overview immediately
 	const [liveRows, setLiveRows] = useState<GridRowData[]>([]);
 
-	const entries =
-		useLiveQuery(
+	const entriesQuery = useLiveQuery(
 			() =>
 				db.timeEntries
 					.where("date")
 					.equals(selectedDate)
 					.sortBy("startTime"),
 			[selectedDate]
-		) ?? [];
+		);
+	const entries = useMemo(() => entriesQuery ?? [], [entriesQuery]);
 
 	const { projects, subProjects } = useProjectSubProjectLists();
-	const items = useLiveQuery(() => db.items.toArray()) ?? [];
+	const itemsQuery = useLiveQuery(() => db.items.toArray());
+	const items = useMemo(() => itemsQuery ?? [], [itemsQuery]);
 	const allEntryCount = useLiveQuery(() => db.timeEntries.count()) ?? 0;
 
 	const totalMinutes = useMemo(() => {
@@ -219,7 +220,7 @@ export default function DayView() {
 		} else if (current !== selectedDate) {
 			setSearchParams({ date: selectedDate }, { replace: true });
 		}
-	}, [selectedDate]);
+	}, [selectedDate, searchParams, setSearchParams]);
 
 	const registerCommitAllDirty = useCallback(
 		(commitAllDirty: () => Promise<boolean>) => {

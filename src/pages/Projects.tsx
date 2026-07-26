@@ -14,17 +14,36 @@ export default function Projects() {
   const [subKey, setSubKey] = useState('')
   const [activeProjectId, setActiveProjectId] = useState<number | null>(null)
   const [copiedId, setCopiedId] = useState<number | null>(null)
+  const [error, setError] = useState('')
 
   async function addProject(e: React.FormEvent) {
     e.preventDefault()
     if (!name.trim() || !key.trim()) return
-    await db.projects.add({ name: name.trim(), key: key.trim().toLowerCase(), active: true })
+    const normalizedKey = key.trim().toLowerCase()
+    if (projects.some((project) => project.key.toLowerCase() === normalizedKey)) {
+      setError(t('projects.duplicateProjectKey'))
+      return
+    }
+    await db.projects.add({ name: name.trim(), key: normalizedKey, active: true })
     setName('')
     setKey('')
+    setError('')
   }
 
   async function saveField(id: number, field: string, value: string) {
     await db.projects.update(id, { [field]: value.trim() || undefined })
+  }
+
+  async function saveProjectKey(project: Project, value: string) {
+    const normalizedKey = value.trim().toLowerCase()
+    if (!normalizedKey || projects.some((other) => other.id !== project.id && other.key.toLowerCase() === normalizedKey)) {
+      setError(t('projects.duplicateProjectKey'))
+      return false
+    }
+
+    await db.projects.update(project.id!, { key: normalizedKey })
+    setError('')
+    return true
   }
 
   async function saveLinkTemplate(id: number, template: string) {
@@ -39,25 +58,34 @@ export default function Projects() {
     await db.projects.update(p.id!, { active: !p.active })
   }
 
-  async function deleteProject(id: number) {
-    await db.subProjects.where('projectId').equals(id).delete()
-    await db.projects.delete(id)
+  async function archiveProject(id: number) {
+    await db.transaction('rw', [db.projects, db.subProjects], async () => {
+      await db.projects.update(id, { active: false })
+      await db.subProjects.where('projectId').equals(id).modify({ active: false })
+    })
   }
 
   async function addSubProject(e: React.FormEvent, projectId: number) {
     e.preventDefault()
     if (!subName.trim() || !subKey.trim()) return
+    const normalizedKey = subKey.trim().toLowerCase()
+    if (subProjects.some((subProject) => subProject.projectId === projectId && subProject.key.toLowerCase() === normalizedKey)) {
+      setError(t('projects.duplicateSubProjectKey'))
+      return
+    }
     await db.subProjects.add({
       projectId,
       name: subName.trim(),
-      key: subKey.trim().toLowerCase(),
+      key: normalizedKey,
+      active: true,
     })
     setSubName('')
     setSubKey('')
+    setError('')
   }
 
-  async function deleteSubProject(id: number) {
-    await db.subProjects.delete(id)
+  async function archiveSubProject(id: number) {
+    await db.subProjects.update(id, { active: false })
   }
 
   async function shareProject(p: Project) {
@@ -106,6 +134,7 @@ export default function Projects() {
           {t('projects.add')}
         </button>
       </form>
+      {error && <p className="-mt-5 text-sm text-red-600 dark:text-red-400">{error}</p>}
 
       {/* Project List */}
       <div className="space-y-3">
@@ -167,10 +196,10 @@ export default function Projects() {
                   {p.active ? t('projects.deactivate') : t('projects.activate')}
                 </button>
                 <button
-                  onClick={(e) => { e.stopPropagation(); deleteProject(p.id!) }}
+                  onClick={(e) => { e.stopPropagation(); void archiveProject(p.id!) }}
                   className="text-xs px-2 py-1 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
                 >
-                  {t('common.delete')}
+                  {t('projects.archive')}
                 </button>
               </div>
 
@@ -184,7 +213,11 @@ export default function Projects() {
                       <input
                         type="text"
                         defaultValue={p.key}
-                        onBlur={(e) => saveField(p.id!, 'key', e.target.value.toLowerCase())}
+                        onBlur={(e) => {
+                          void saveProjectKey(p, e.target.value).then((saved) => {
+                            if (!saved) e.currentTarget.value = p.key
+                          })
+                        }}
                         className="w-28 px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md text-xs font-mono focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-100 focus:border-transparent"
                       />
                     </div>
@@ -232,17 +265,17 @@ export default function Projects() {
                   </div>
 
                   {/* Sub Projects */}
-                  {subs.map((s) => (
+                  {subs.filter((s) => s.active).map((s) => (
                     <div key={s.id} className="flex items-center gap-3 py-1">
                       <span className="font-mono text-xs bg-white dark:bg-slate-700 text-slate-500 dark:text-slate-300 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-600">
                         {s.key}
                       </span>
                       <span className="text-sm flex-1">{s.name}</span>
                       <button
-                        onClick={() => deleteSubProject(s.id!)}
+                        onClick={() => void archiveSubProject(s.id!)}
                         className="text-xs text-red-400 hover:text-red-600 transition-colors"
                       >
-                        {t('projects.remove')}
+                        {t('projects.archive')}
                       </button>
                     </div>
                   ))}

@@ -22,6 +22,7 @@ export default function Todo() {
   const [draftText, setDraftText] = useState('')
   const [linkedItemId, setLinkedItemId] = useState<number | undefined>()
   const [editingId, setEditingId] = useState<number | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
   const [dragOverId, setDragOverId] = useState<number | null>(null)
   const [dropPosition, setDropPosition] = useState<DropPosition>(null)
   const titleRef = useRef<HTMLInputElement>(null)
@@ -94,6 +95,7 @@ export default function Todo() {
 
   async function deleteTodo(id: number) {
     await db.todoTasks.delete(id)
+    setConfirmDeleteId(null)
     if (editingId === id) resetComposer()
   }
 
@@ -261,24 +263,42 @@ export default function Todo() {
                     )}
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      if (!todo.id) return
-                      void deleteTodo(todo.id)
-                    }}
-                    className="inline-flex items-center gap-1 rounded-md border border-red-200 dark:border-red-800/60 bg-red-50 dark:bg-red-900/20 px-2 py-1 text-xs font-medium text-red-600 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
-                    title={t('todo.quickDeleteTitle')}
-                  >
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="3 6 5 6 21 6" />
-                      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                      <path d="M10 11v6M14 11v6" />
-                      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-                    </svg>
-                    {t('common.delete')}
-                  </button>
+                  {confirmDeleteId === todo.id ? (
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          if (todo.id) void deleteTodo(todo.id)
+                        }}
+                        className="rounded-md border border-red-300 bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700 transition-colors"
+                      >
+                        {t('common.yes')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(null) }}
+                        className="rounded-md border border-slate-200 dark:border-slate-700 px-2 py-1 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                      >
+                        {t('common.no')}
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(todo.id ?? null) }}
+                      className="inline-flex items-center gap-1 rounded-md border border-red-200 dark:border-red-800/60 bg-red-50 dark:bg-red-900/20 px-2 py-1 text-xs font-medium text-red-600 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+                      title={t('todo.quickDeleteTitle')}
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                        <path d="M10 11v6M14 11v6" />
+                        <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 1 0 0 1 1 1v2" />
+                      </svg>
+                      {t('common.delete')}
+                    </button>
+                  )}
                 </div>
               </div>
             )
@@ -340,7 +360,7 @@ export default function Todo() {
               >
                 <option value="">{t('todo.noLinkedItem')}</option>
                 {items
-                  .filter((item) => Boolean(item.id) && item.status !== 'done')
+                  .filter((item) => Boolean(item.id) && item.status !== 'done' && !item.archived)
                   .map((item) => (
                     <option key={item.id} value={item.id}>
                       {buildItemLabel(item, projectKeyById.get(item.projectId))}

@@ -11,6 +11,7 @@ const Items = lazy(() => import('./pages/Items'))
 const Todo = lazy(() => import('./pages/Todo'))
 const Projects = lazy(() => import('./pages/Projects'))
 const Import = lazy(() => import('./pages/Import'))
+const DataManagement = lazy(() => import('./pages/DataManagement'))
 
 function Loading() {
   return (
@@ -33,6 +34,7 @@ export default function App() {
           <Route path="/items/:id" element={<ItemDetailOverlay mode="page" />} />
           <Route path="/todo" element={<Suspense fallback={<Loading />}><Todo /></Suspense>} />
           <Route path="/projects" element={<Suspense fallback={<Loading />}><Projects /></Suspense>} />
+          <Route path="/data" element={<Suspense fallback={<Loading />}><DataManagement /></Suspense>} />
           <Route path="/import" element={<Suspense fallback={<Loading />}><Import /></Suspense>} />
         </Route>
       </Routes>

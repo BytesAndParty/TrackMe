@@ -35,6 +35,7 @@ export default function SubProjectCreateModal({
       projectId,
       key: key.trim().toLowerCase(),
       name: name.trim(),
+      active: true,
     }
     const id = await db.subProjects.add(newSubProject)
     // Note: closing is handled by the parent via onCreated (which clears the request);
