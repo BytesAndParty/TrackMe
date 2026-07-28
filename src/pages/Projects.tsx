@@ -1,12 +1,12 @@
 import { useState } from 'react'
-import { useLiveQuery } from 'dexie-react-hooks'
 import { useTranslation } from 'react-i18next'
 import { db, type Project, PROJECT_COLORS } from '../db'
+import ColorPicker from '../components/kanban/ColorPicker'
+import { useProjectSubProjectLists } from '../hooks/useProjectSubProjectLists'
 
 export default function Projects() {
   const { t } = useTranslation()
-  const projects = useLiveQuery(() => db.projects.toArray()) ?? []
-  const subProjects = useLiveQuery(() => db.subProjects.toArray()) ?? []
+  const { projects, subProjects } = useProjectSubProjectLists()
 
   const [name, setName] = useState('')
   const [key, setKey] = useState('')
@@ -235,19 +235,12 @@ export default function Projects() {
                   {/* Project Color */}
                   <div>
                     <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">{t('projects.projectColor')}</label>
-                    <div className="flex flex-wrap gap-1.5">
-                      {PROJECT_COLORS.map((c) => (
-                        <button
-                          key={c}
-                          type="button"
-                          onClick={() => saveColor(p.id!, p.color === c ? '' : c)}
-                          className={`w-6 h-6 rounded-full transition-all ${
-                            p.color === c ? 'ring-2 ring-offset-2 ring-offset-white dark:ring-offset-slate-800 ring-slate-900 dark:ring-slate-100 scale-110' : 'hover:scale-110'
-                          }`}
-                          style={{ backgroundColor: c }}
-                        />
-                      ))}
-                    </div>
+                    <ColorPicker
+                      colors={PROJECT_COLORS}
+                      value={p.color}
+                      onChange={(c) => saveColor(p.id!, c)}
+                      ringOffsetDarkClass="dark:ring-offset-slate-800"
+                    />
                   </div>
 
                   {/* Link Template */}

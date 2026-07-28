@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { db, type Item, type ItemStatus, type ItemType, type Project, type SubProject } from '../../db'
+import { db, type Item, type ItemStatus, type Project, type SubProject } from '../../db'
 import ItemDetailForm from './ItemDetailForm'
 import ItemDetailFooter from './ItemDetailFooter'
 import CloseButton from './CloseButton'
-import { minutesToHoursInput, parseEstimatedMinutes } from './itemDetailUtils'
+import { minutesToHoursInput, validateItemSave } from './itemDetailUtils'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
+import { useItemDetailFields } from '../../hooks/useItemDetailFields'
 
 interface ItemDetailModalProps {
   item?: Item
@@ -35,60 +36,39 @@ export default function ItemDetailModal({
   const { t } = useTranslation()
   const isEdit = !!item
 
-  const [projectId, setProjectId] = useState<number | ''>(item?.projectId ?? defaultProjectId ?? '')
-  const [subProjectId, setSubProjectId] = useState<number | ''>(item?.subProjectId ?? defaultSubProjectId ?? '')
-  const [itemNr, setItemNr] = useState(item?.itemNr ?? defaultItemNr ?? '')
-  const [title, setTitle] = useState(item?.title ?? defaultTitle ?? '')
-  const [description, setDescription] = useState(item?.description ?? '')
-  const [type, setType] = useState<ItemType>(item?.type ?? 'task')
-  const [status, setStatus] = useState<ItemStatus>(item?.status ?? defaultStatus ?? 'todo')
-  const [estimatedHours, setEstimatedHours] = useState(minutesToHoursInput(item?.estimatedMinutes))
-  const [url, setUrl] = useState(item?.url ?? '')
-  const [notes, setNotes] = useState(item?.notes ?? '')
+  const { formProps, projectId, itemNr, title, description, type, status, estimatedHours, url, subProjectId, notes } = useItemDetailFields(
+    projects,
+    subProjects,
+    {
+      projectId: item?.projectId ?? defaultProjectId ?? '',
+      subProjectId: item?.subProjectId ?? defaultSubProjectId ?? '',
+      itemNr: item?.itemNr ?? defaultItemNr ?? '',
+      title: item?.title ?? defaultTitle ?? '',
+      description: item?.description ?? '',
+      type: item?.type ?? 'task',
+      status: item?.status ?? defaultStatus ?? 'todo',
+      estimatedHours: minutesToHoursInput(item?.estimatedMinutes),
+      url: item?.url ?? '',
+      notes: item?.notes ?? '',
+      notesCollapsed: !(item?.notes ?? '').trim(),
+    }
+  )
   const [saveError, setSaveError] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const [infoCollapsed, setInfoCollapsed] = useState(() => localStorage.getItem('itemDetailInfoCollapsed') === 'true')
-  const [notesCollapsed, setNotesCollapsed] = useState(() => !(item?.notes ?? '').trim())
-  const [notesPreview, setNotesPreview] = useState(false)
 
   useEscapeKey(onClose)
-
-  function handleProjectIdChange(value: number | '') {
-    setProjectId(value)
-    const stillValid = subProjects.some((s) => s.id === subProjectId && s.projectId === value)
-    if (!stillValid) setSubProjectId('')
-  }
-
-  function toggleInfoCollapsed() {
-    setInfoCollapsed((prev) => {
-      const next = !prev
-      localStorage.setItem('itemDetailInfoCollapsed', String(next))
-      return next
-    })
-  }
-
-  function toggleNotesCollapsed() {
-    setNotesCollapsed((prev) => !prev)
-  }
 
   async function handleSave() {
     if (!projectId || !title.trim()) return
 
     const now = new Date().toISOString()
-    const estimatedMinutes = parseEstimatedMinutes(estimatedHours)
-    const normalizedItemNr = itemNr.trim()
-    if (normalizedItemNr) {
-      const duplicate = await db.items
-        .where('projectId')
-        .equals(Number(projectId))
-        .filter((candidate) => candidate.id !== item?.id && candidate.itemNr === normalizedItemNr)
-        .first()
-      if (duplicate) {
-        setSaveError(t('itemDetail.duplicateItemNr'))
-        return
-      }
+    const validation = await validateItemSave(Number(projectId), itemNr, estimatedHours, item?.id)
+    if (!validation.ok) {
+      setSaveError(t('itemDetail.duplicateItemNr'))
+      return
     }
     setSaveError('')
+    const { normalizedItemNr, estimatedMinutes } = validation
 
     if (isEdit && item?.id) {
       await db.items.update(item.id, {
@@ -148,38 +128,7 @@ export default function ItemDetailModal({
         </div>
 
         <div className="px-6 py-4 space-y-6 overflow-y-auto flex-1">
-          <ItemDetailForm
-            projects={projects}
-            projectId={projectId}
-            onProjectIdChange={handleProjectIdChange}
-            subProjects={subProjects}
-            subProjectId={subProjectId}
-            onSubProjectIdChange={setSubProjectId}
-            itemNr={itemNr}
-            onItemNrChange={setItemNr}
-            title={title}
-            onTitleChange={setTitle}
-            description={description}
-            onDescriptionChange={setDescription}
-            type={type}
-            onTypeChange={setType}
-            status={status}
-            onStatusChange={setStatus}
-            estimatedHours={estimatedHours}
-            onEstimatedHoursChange={setEstimatedHours}
-            url={url}
-            onUrlChange={setUrl}
-            notes={notes}
-            onNotesChange={setNotes}
-            infoCollapsed={infoCollapsed}
-            onToggleInfoCollapsed={toggleInfoCollapsed}
-            notesCollapsed={notesCollapsed}
-            onToggleNotesCollapsed={toggleNotesCollapsed}
-            notesPreview={notesPreview}
-            onToggleNotesPreview={() => setNotesPreview(!notesPreview)}
-            notesRows={16}
-            notesPreviewMinHeightClass="min-h-[240px]"
-          />
+          <ItemDetailForm {...formProps} notesRows={16} notesPreviewMinHeightClass="min-h-[240px]" />
           {saveError && <p className="text-sm text-red-600 dark:text-red-400">{saveError}</p>}
         </div>
 

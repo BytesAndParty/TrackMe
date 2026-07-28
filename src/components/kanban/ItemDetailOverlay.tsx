@@ -2,13 +2,15 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useTranslation } from 'react-i18next'
-import { db, type ItemStatus, type ItemType } from '../../db'
+import { db } from '../../db'
 import { formatDuration, formatDateShort } from '../../lib/parser'
 import ItemDetailForm from './ItemDetailForm'
 import ItemDetailFooter from './ItemDetailFooter'
 import CloseButton from './CloseButton'
-import { minutesToHoursInput, parseEstimatedMinutes } from './itemDetailUtils'
+import { minutesToHoursInput, validateItemSave } from './itemDetailUtils'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
+import { useItemDetailFields } from '../../hooks/useItemDetailFields'
+import { useProjectSubProjectLists } from '../../hooks/useProjectSubProjectLists'
 
 interface Props {
   itemId?: number
@@ -29,8 +31,7 @@ export default function ItemDetailOverlay({ itemId: propItemId, onClose: propOnC
 
   const item = useLiveQuery(() => (numericId ? db.items.get(numericId) : undefined), [numericId])
 
-  const projects = useLiveQuery(() => db.projects.toArray()) ?? []
-  const subProjects = useLiveQuery(() => db.subProjects.toArray()) ?? []
+  const { projects, subProjects } = useProjectSubProjectLists()
 
   const timeEntries =
     useLiveQuery(() => {
@@ -44,25 +45,33 @@ export default function ItemDetailOverlay({ itemId: propItemId, onClose: propOnC
 
   const totalMinutes = timeEntries.reduce((sum, e) => sum + e.durationMinutes, 0)
 
-  const [projectId, setProjectId] = useState<number | ''>('')
-  const [subProjectId, setSubProjectId] = useState<number | ''>('')
-  const [itemNr, setItemNr] = useState('')
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
-  const [type, setType] = useState<ItemType>('task')
-  const [status, setStatus] = useState<ItemStatus>('todo')
-  const [estimatedHours, setEstimatedHours] = useState('')
-  const [url, setUrl] = useState('')
-  const [notes, setNotes] = useState('')
+  const {
+    formProps,
+    projectId,
+    subProjectId,
+    itemNr,
+    title,
+    description,
+    type,
+    status,
+    estimatedHours,
+    url,
+    notes,
+    setProjectId,
+    setSubProjectId,
+    setItemNr,
+    setTitle,
+    setDescription,
+    setType,
+    setStatus,
+    setEstimatedHours,
+    setUrl,
+    setNotes,
+    setNotesCollapsed,
+  } = useItemDetailFields(projects, subProjects, { notesCollapsed: true })
   const [saveError, setSaveError] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const [infoCollapsed, setInfoCollapsed] = useState(
-    () => localStorage.getItem('itemDetailInfoCollapsed') === 'true'
-  )
-  const [notesCollapsed, setNotesCollapsed] = useState(true)
-  const [notesPreview, setNotesPreview] = useState(false)
 
-  /* eslint-disable react-hooks/set-state-in-effect -- sync form state from async live query */
   useEffect(() => {
     if (item) {
       setProjectId(item.projectId)
@@ -77,8 +86,7 @@ export default function ItemDetailOverlay({ itemId: propItemId, onClose: propOnC
       setNotes(item.notes)
       setNotesCollapsed(!item.notes?.trim())
     }
-  }, [item])
-  /* eslint-enable react-hooks/set-state-in-effect */
+  }, [item, setProjectId, setSubProjectId, setItemNr, setTitle, setDescription, setType, setStatus, setEstimatedHours, setUrl, setNotes, setNotesCollapsed])
 
   const close = useCallback(() => {
     if (propOnClose) {
@@ -90,28 +98,15 @@ export default function ItemDetailOverlay({ itemId: propItemId, onClose: propOnC
 
   useEscapeKey(close)
 
-  function handleProjectIdChange(value: number | '') {
-    setProjectId(value)
-    const stillValid = subProjects.some((s) => s.id === subProjectId && s.projectId === value)
-    if (!stillValid) setSubProjectId('')
-  }
-
   async function handleSave() {
     if (!item?.id || !projectId || !title.trim()) return
-    const estimatedMinutes = parseEstimatedMinutes(estimatedHours)
-    const normalizedItemNr = itemNr.trim()
-    if (normalizedItemNr) {
-      const duplicate = await db.items
-        .where('projectId')
-        .equals(Number(projectId))
-        .filter((candidate) => candidate.id !== item.id && candidate.itemNr === normalizedItemNr)
-        .first()
-      if (duplicate) {
-        setSaveError(t('itemDetail.duplicateItemNr'))
-        return
-      }
+    const validation = await validateItemSave(Number(projectId), itemNr, estimatedHours, item.id)
+    if (!validation.ok) {
+      setSaveError(t('itemDetail.duplicateItemNr'))
+      return
     }
     setSaveError('')
+    const { normalizedItemNr, estimatedMinutes } = validation
     await db.items.update(item.id, {
       projectId: Number(projectId),
       subProjectId: subProjectId ? Number(subProjectId) : undefined,
@@ -135,18 +130,6 @@ export default function ItemDetailOverlay({ itemId: propItemId, onClose: propOnC
     }
   }
 
-  function toggleInfoCollapsed() {
-    setInfoCollapsed((prev) => {
-      const next = !prev
-      localStorage.setItem('itemDetailInfoCollapsed', String(next))
-      return next
-    })
-  }
-
-  function toggleNotesCollapsed() {
-    setNotesCollapsed((prev) => !prev)
-  }
-
   if (!item) return null
 
   const estimatedMinutes = item.estimatedMinutes ?? 0
@@ -165,34 +148,7 @@ export default function ItemDetailOverlay({ itemId: propItemId, onClose: propOnC
 
         <div className="px-6 py-4 space-y-6 overflow-y-auto flex-1">
           <ItemDetailForm
-            projects={projects}
-            projectId={projectId}
-            onProjectIdChange={handleProjectIdChange}
-            subProjects={subProjects}
-            subProjectId={subProjectId}
-            onSubProjectIdChange={setSubProjectId}
-            itemNr={itemNr}
-            onItemNrChange={setItemNr}
-            title={title}
-            onTitleChange={setTitle}
-            description={description}
-            onDescriptionChange={setDescription}
-            type={type}
-            onTypeChange={setType}
-            status={status}
-            onStatusChange={setStatus}
-            estimatedHours={estimatedHours}
-            onEstimatedHoursChange={setEstimatedHours}
-            url={url}
-            onUrlChange={setUrl}
-            notes={notes}
-            onNotesChange={setNotes}
-            infoCollapsed={infoCollapsed}
-            onToggleInfoCollapsed={toggleInfoCollapsed}
-            notesCollapsed={notesCollapsed}
-            onToggleNotesCollapsed={toggleNotesCollapsed}
-            notesPreview={notesPreview}
-            onToggleNotesPreview={() => setNotesPreview(!notesPreview)}
+            {...formProps}
             afterNotes={
               <div>
                 <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-3">

@@ -210,12 +210,7 @@ export default function EditableGrid({
   }, [projects, subProjects])
 
   const getItemSuggestions = useCallback((projectKey: string, subProjectKey: string) => {
-    if (!projectKey) {
-      return items
-        .filter((i) => i.status !== 'done' && !i.archived)
-        .map((item) => ({ key: item.itemNr, name: item.title, id: item.id! }))
-    }
-    const project = projects.find((p) => p.key.toLowerCase() === projectKey.toLowerCase())
+    const project = projectKey ? projects.find((p) => p.key.toLowerCase() === projectKey.toLowerCase()) : undefined
     if (!project) {
       return items
         .filter((i) => i.status !== 'done' && !i.archived)

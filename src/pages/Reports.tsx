@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useTranslation } from 'react-i18next'
 import { db, lightenColor } from '../db'
+import { useProjectSubProjectLists } from '../hooks/useProjectSubProjectLists'
 import { formatDuration, formatDateShort, getWeekDates, toLocalISO, todayISO, getISOWeek } from '../lib/parser'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -91,8 +92,7 @@ export default function Reports() {
     () => db.timeEntries.where('date').between(dateFrom, dateTo, true, true).toArray(),
     [dateFrom, dateTo]
   ) ?? []
-  const projects = useLiveQuery(() => db.projects.toArray()) ?? []
-  const subProjects = useLiveQuery(() => db.subProjects.toArray()) ?? []
+  const { projects, subProjects } = useProjectSubProjectLists()
 
   const isDark = document.documentElement.classList.contains('dark')
 

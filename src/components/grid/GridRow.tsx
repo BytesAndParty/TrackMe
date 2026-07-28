@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next'
 import TimeCell from './TimeCell'
 import AutocompleteCell from './AutocompleteCell'
 import TextCell from './TextCell'
+import CreateEntityButton from './CreateEntityButton'
 
 interface GridRowProps {
   row: GridRowData
@@ -118,17 +119,7 @@ export const GridRow = React.memo(function GridRow({
             />
           </div>
           {hasNoProjectMatch && (
-            <button
-              type="button"
-              onClick={() => onRequestCreateProject(row._key, row.project)}
-              className="opacity-0 group-hover:opacity-100 p-1 text-slate-300 dark:text-slate-600 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all shrink-0"
-              tabIndex={-1}
-              title={t('grid.createProject')}
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
-            </button>
+            <CreateEntityButton onClick={() => onRequestCreateProject(row._key, row.project)} title={t('grid.createProject')} />
           )}
         </div>
       </td>
@@ -148,17 +139,7 @@ export const GridRow = React.memo(function GridRow({
             />
           </div>
           {hasNoSubProjectMatch && (
-            <button
-              type="button"
-              onClick={() => onRequestCreateSubProject(row._key, row.subProject)}
-              className="opacity-0 group-hover:opacity-100 p-1 text-slate-300 dark:text-slate-600 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all shrink-0"
-              tabIndex={-1}
-              title={t('grid.createSubProject')}
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
-            </button>
+            <CreateEntityButton onClick={() => onRequestCreateSubProject(row._key, row.subProject)} title={t('grid.createSubProject')} />
           )}
         </div>
       </td>
@@ -177,17 +158,7 @@ export const GridRow = React.memo(function GridRow({
             />
           </div>
           {hasNoItemMatch && (
-            <button
-              type="button"
-              onClick={() => onRequestCreateItem(row._key, row.itemNr)}
-              className="opacity-0 group-hover:opacity-100 p-1 text-slate-300 dark:text-slate-600 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all shrink-0"
-              tabIndex={-1}
-              title={t('grid.createItem')}
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
-            </button>
+            <CreateEntityButton onClick={() => onRequestCreateItem(row._key, row.itemNr)} title={t('grid.createItem')} />
           )}
           {(() => {
             const itemUrl = buildItemUrl(row.itemNr, row.project)

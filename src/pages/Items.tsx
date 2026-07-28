@@ -7,6 +7,7 @@ import { useHotkey } from '@tanstack/react-hotkeys'
 import KanbanBoard from '../components/kanban/KanbanBoard'
 import ItemDetailModal from '../components/kanban/ItemDetailModal'
 import ProjectOptions from '../components/kanban/ProjectOptions'
+import { useProjectSubProjectLists } from '../hooks/useProjectSubProjectLists'
 
 export default function Items() {
   const { t } = useTranslation()
@@ -16,8 +17,7 @@ export default function Items() {
   const [trashOver, setTrashOver] = useState(false)
   const navigate = useNavigate()
 
-  const projects = useLiveQuery(() => db.projects.toArray()) ?? []
-  const subProjects = useLiveQuery(() => db.subProjects.toArray()) ?? []
+  const { projects, subProjects } = useProjectSubProjectLists()
   const items = useLiveQuery(
     () => {
       if (filterProjectId) {

@@ -6,6 +6,7 @@ import { db } from '../db'
 import { createBackup, createTimeEntryTransferRows, createTimeEntryWorkbook, parseBackup, readTimeEntryFile, type TimeEntryImportResult, type TrackMeBackup } from '../lib/dataTransfer'
 import { calculateDuration } from '../lib/parser'
 import { ensureBackupFolderPermission, useBackupFolder, writeBackupToFolder } from '../hooks/useBackupFolder'
+import { useProjectSubProjectLists } from '../hooks/useProjectSubProjectLists'
 
 function download(content: BlobPart, fileName: string, type: string) {
   const url = URL.createObjectURL(new Blob([content], { type }))
@@ -26,8 +27,7 @@ function entryKey(entry: { date: string; startTime: string; endTime: string; pro
 
 export default function DataManagement() {
   const { t } = useTranslation()
-  const projects = useLiveQuery(() => db.projects.toArray()) ?? []
-  const subProjects = useLiveQuery(() => db.subProjects.toArray()) ?? []
+  const { projects, subProjects } = useProjectSubProjectLists()
   const entries = useLiveQuery(() => db.timeEntries.toArray()) ?? []
   const backupInput = useRef<HTMLInputElement>(null)
   const importInput = useRef<HTMLInputElement>(null)
