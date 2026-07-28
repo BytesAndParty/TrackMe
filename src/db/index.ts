@@ -70,6 +70,11 @@ export interface TodoTask {
   updatedAt: string
 }
 
+interface Setting {
+  key: string
+  value: unknown
+}
+
 const db = new Dexie('TrackMeDB') as Dexie & {
   projects: EntityTable<Project, 'id'>
   subProjects: EntityTable<SubProject, 'id'>
@@ -77,6 +82,7 @@ const db = new Dexie('TrackMeDB') as Dexie & {
   timeEntries: EntityTable<TimeEntry, 'id'>
   items: EntityTable<Item, 'id'>
   todoTasks: EntityTable<TodoTask, 'id'>
+  settings: EntityTable<Setting, 'key'>
 }
 
 db.version(1).stores({
@@ -173,6 +179,16 @@ db.version(9).stores({
       if (item.archived === undefined) item.archived = false
     }),
   ])
+})
+
+db.version(10).stores({
+  projects: '++id, key, name, active',
+  subProjects: '++id, projectId, key, name, active',
+  workItemLinks: '++id, itemId, projectId, subProjectId',
+  timeEntries: '++id, date, projectId, subProjectId, workItemLinkId, itemNr',
+  items: '++id, projectId, subProjectId, itemNr, status, archived, sortOrder',
+  todoTasks: '++id, sortOrder, linkedItemId, createdAt',
+  settings: 'key',
 })
 
 export const PROJECT_COLORS = [

@@ -12,6 +12,7 @@ const Todo = lazy(() => import('./pages/Todo'))
 const Projects = lazy(() => import('./pages/Projects'))
 const Import = lazy(() => import('./pages/Import'))
 const DataManagement = lazy(() => import('./pages/DataManagement'))
+const Settings = lazy(() => import('./pages/Settings'))
 
 function Loading() {
   return (
@@ -36,6 +37,7 @@ export default function App() {
           <Route path="/projects" element={<Suspense fallback={<Loading />}><Projects /></Suspense>} />
           <Route path="/data" element={<Suspense fallback={<Loading />}><DataManagement /></Suspense>} />
           <Route path="/import" element={<Suspense fallback={<Loading />}><Import /></Suspense>} />
+          <Route path="/settings" element={<Suspense fallback={<Loading />}><Settings /></Suspense>} />
         </Route>
       </Routes>
     </BrowserRouter>

@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { db } from '../db'
 import { createBackup, createTimeEntryTransferRows, createTimeEntryWorkbook, parseBackup, readTimeEntryFile, type TimeEntryImportResult, type TrackMeBackup } from '../lib/dataTransfer'
 import { calculateDuration } from '../lib/parser'
+import { ensureBackupFolderPermission, useBackupFolder, writeBackupToFolder } from '../hooks/useBackupFolder'
 
 function download(content: BlobPart, fileName: string, type: string) {
   const url = URL.createObjectURL(new Blob([content], { type }))
@@ -34,6 +35,7 @@ export default function DataManagement() {
   const [importResult, setImportResult] = useState<TimeEntryImportResult | null>(null)
   const [message, setMessage] = useState('')
   const [confirmRestore, setConfirmRestore] = useState(false)
+  const { handle: backupFolder } = useBackupFolder()
 
   async function currentBackup() {
     return createBackup({
@@ -43,8 +45,24 @@ export default function DataManagement() {
     })
   }
 
+  async function saveBackupFile(content: string, fileName: string) {
+    if (backupFolder && (await ensureBackupFolderPermission(backupFolder))) {
+      try {
+        await writeBackupToFolder(backupFolder, fileName, content)
+        return true
+      } catch {
+        // fall back to browser download below
+      }
+    }
+    download(content, fileName, 'application/json')
+    return false
+  }
+
   async function exportBackup() {
-    download(JSON.stringify(await currentBackup(), null, 2), `trackme-backup-${fileDate()}.json`, 'application/json')
+    const content = JSON.stringify(await currentBackup(), null, 2)
+    const fileName = `trackme-backup-${fileDate()}.json`
+    const wroteToFolder = await saveBackupFile(content, fileName)
+    if (wroteToFolder) setMessage(t('data.backupWrittenToFolder', { folder: backupFolder!.name }))
   }
 
   function exportEntries(format: 'csv' | 'xlsx') {
@@ -70,7 +88,7 @@ export default function DataManagement() {
     if (!backup) return
     if (!confirmRestore) { setConfirmRestore(true); return }
     try {
-      download(JSON.stringify(await currentBackup(), null, 2), `trackme-before-restore-${fileDate()}.json`, 'application/json')
+      await saveBackupFile(JSON.stringify(await currentBackup(), null, 2), `trackme-before-restore-${fileDate()}.json`)
       await db.transaction('rw', [db.projects, db.subProjects, db.workItemLinks, db.timeEntries, db.items, db.todoTasks], async () => {
         await Promise.all([db.todoTasks.clear(), db.items.clear(), db.timeEntries.clear(), db.workItemLinks.clear(), db.subProjects.clear(), db.projects.clear()])
         if (backup.data.projects.length) await db.projects.bulkAdd(backup.data.projects)
