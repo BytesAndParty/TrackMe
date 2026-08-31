@@ -215,4 +215,78 @@ describe('useGridState', () => {
     expect(mocks.timeEntriesAdd).not.toHaveBeenCalled()
     expect(result.current.saveStatus).toBe('error')
   })
+
+  it('saves a complete row on unmount even when another row is only half filled', async () => {
+    // Stabile Referenzen, damit der Unmount-Effect nur beim Unmount laeuft
+    const projects: Project[] = []
+    const subProjects: SubProject[] = []
+    const entries: TimeEntry[] = []
+
+    const { result, unmount } = renderHook(() =>
+      useGridState('2026-02-11', entries, projects, subProjects, [])
+    )
+    const completeKey = result.current.rows[0]._key
+
+    act(() => {
+      result.current.updateCell(completeKey, 'startTime', '09:00')
+      result.current.updateCell(completeKey, 'endTime', '10:00')
+    })
+
+    // Zweite Zeile nur angetippt, dann Ansicht verlassen
+    const halfFilledKey = result.current.rows[1]._key
+    act(() => {
+      result.current.updateCell(halfFilledKey, 'startTime', '10:00')
+    })
+
+    await act(async () => {
+      unmount()
+      await Promise.resolve()
+    })
+
+    expect(mocks.timeEntriesAdd).toHaveBeenCalledTimes(1)
+    expect(mocks.timeEntriesAdd).toHaveBeenCalledWith(
+      expect.objectContaining({ startTime: '09:00', endTime: '10:00' })
+    )
+  })
+
+  it('saves an edited existing entry on unmount even when another row is only half filled', async () => {
+    const existingEntry: TimeEntry = {
+      id: 7,
+      date: '2026-02-11',
+      startTime: '08:00',
+      endTime: '09:00',
+      durationMinutes: 60,
+      itemNr: '',
+      taskText: 'alt',
+      notes: '',
+    }
+    const projects: Project[] = []
+    const subProjects: SubProject[] = []
+    const entries: TimeEntry[] = [existingEntry]
+
+    const { result, unmount } = renderHook(() =>
+      useGridState('2026-02-11', entries, projects, subProjects, [])
+    )
+
+    const existingKey = result.current.rows.find((row) => row._id === 7)!._key
+    act(() => {
+      result.current.updateCell(existingKey, 'taskText', 'geaendert')
+    })
+
+    const halfFilledKey = result.current.rows.find((row) => row._isNew)!._key
+    act(() => {
+      result.current.updateCell(halfFilledKey, 'startTime', '10:00')
+    })
+
+    await act(async () => {
+      unmount()
+      await Promise.resolve()
+    })
+
+    expect(mocks.timeEntriesUpdate).toHaveBeenCalledTimes(1)
+    expect(mocks.timeEntriesUpdate).toHaveBeenCalledWith(
+      7,
+      expect.objectContaining({ taskText: 'geaendert' })
+    )
+  })
 })

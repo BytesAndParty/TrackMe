@@ -111,23 +111,24 @@ export function useGridPersist(
       return true
     }
 
+    // Unvollstaendige oder ueberlappende Zeilen ueberspringen, aber die gueltigen
+    // Zeilen trotzdem schreiben - sonst gehen sie beim Verlassen der Ansicht verloren.
     const rowsWithTimeInput = dirtyRows.filter((row) => row.startTime || row.endTime)
-    if (rowsWithTimeInput.some((row) => !hasValidTimeRange(row) || overlapsAnotherRow(row, rowsRef.current))) {
-      setSaveStatus('error')
-      return false
-    }
+    const rowsToCommit = rowsWithTimeInput.filter(
+      (row) => hasValidTimeRange(row) && !overlapsAnotherRow(row, rowsRef.current)
+    )
+    const hasInvalidRows = rowsToCommit.length < rowsWithTimeInput.length
 
-    const rowsToCommit = rowsWithTimeInput.filter(hasValidTimeRange)
     if (rowsToCommit.length === 0) {
-      setSaveStatus('saved')
-      return true
+      setSaveStatus(hasInvalidRows ? 'error' : 'saved')
+      return !hasInvalidRows
     }
 
     setSaveStatus('saving')
     try {
       await Promise.all(rowsToCommit.map((row) => commitRow(row._key)))
-      setSaveStatus('saved')
-      return true
+      setSaveStatus(hasInvalidRows ? 'error' : 'saved')
+      return !hasInvalidRows
     } catch (e) {
       console.error('Failed to save entries:', e)
       setSaveStatus('error')
