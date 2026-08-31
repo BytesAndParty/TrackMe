@@ -217,7 +217,7 @@ describe('useGridState', () => {
   })
 
   it('saves a complete row on unmount even when another row is only half filled', async () => {
-    // Stabile Referenzen, damit der Unmount-Effect nur beim Unmount laeuft
+    // Stabile Referenzen, damit der Unmount-Effect nur beim Unmount läuft
     const projects: Project[] = []
     const subProjects: SubProject[] = []
     const entries: TimeEntry[] = []
@@ -270,7 +270,7 @@ describe('useGridState', () => {
 
     const existingKey = result.current.rows.find((row) => row._id === 7)!._key
     act(() => {
-      result.current.updateCell(existingKey, 'taskText', 'geaendert')
+      result.current.updateCell(existingKey, 'taskText', 'geändert')
     })
 
     const halfFilledKey = result.current.rows.find((row) => row._isNew)!._key
@@ -286,7 +286,7 @@ describe('useGridState', () => {
     expect(mocks.timeEntriesUpdate).toHaveBeenCalledTimes(1)
     expect(mocks.timeEntriesUpdate).toHaveBeenCalledWith(
       7,
-      expect.objectContaining({ taskText: 'geaendert' })
+      expect.objectContaining({ taskText: 'geändert' })
     )
   })
 })
