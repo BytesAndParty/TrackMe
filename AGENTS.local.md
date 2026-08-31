@@ -30,6 +30,15 @@ Verwende `bun run test`, nicht `bun test`.
 - Die Endzeit muss nach der Startzeit liegen. Zeiträume über Mitternacht werden nicht unterstützt.
 - Änderungen im Grid brauchen mindestens einen fokussierten Hook- oder Komponententest.
 
+## Sprache und Umlaute
+
+- Umlaute (ä, ö, ü, ß) sind in Code, Strings und Kommentaren korrekt und erwünscht.
+- Keine ASCII-Ersatzschreibweisen ("ae", "oe", "ue", "ss") in deutschem Text - weder in
+  Kommentaren noch in UI-Texten, Commit-Messages oder Dokumentation. Die Quelldateien sind
+  UTF-8.
+- Einzelne ältere ASCII-Stellen im Bestand nicht drive-by mitkorrigieren, nur selbst neu
+  geschriebenen Text.
+
 ## Änderungen
 
 - Texte für beide Sprachen in `src/i18n.ts` ergänzen.

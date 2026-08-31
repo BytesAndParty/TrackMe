@@ -17,6 +17,7 @@ Lokale Zeiterfassung als Progressive Web App (React/TypeScript/Vite). Alle Daten
 - Projekte, Unterprojekte und Items werden archiviert, nie physisch gelöscht.
 - Zeitbuchungen brauchen Start- und Endzeit, Ende nach Start, kein Zeitraum über Mitternacht.
 - Neue Texte immer in beiden Sprachen in `src/i18n.ts`.
+- Umlaute (ä, ö, ü, ß) in Code, Strings und Kommentaren verwenden, keine ASCII-Ersatzschreibweisen. Bestehende ASCII-Stellen nicht drive-by mitkorrigieren.
 - `bun run test` (Vitest) verwenden, **nicht** `bun test`.
 - Vor Abschluss: passender Test + `bun run build`.
 

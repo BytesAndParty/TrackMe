@@ -111,7 +111,7 @@ export function useGridPersist(
       return true
     }
 
-    // Unvollstaendige oder ueberlappende Zeilen ueberspringen, aber die gueltigen
+    // Unvollständige oder überlappende Zeilen überspringen, aber die gültigen
     // Zeilen trotzdem schreiben - sonst gehen sie beim Verlassen der Ansicht verloren.
     const rowsWithTimeInput = dirtyRows.filter((row) => row.startTime || row.endTime)
     const rowsToCommit = rowsWithTimeInput.filter(

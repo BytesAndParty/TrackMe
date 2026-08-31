@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, type Project, type SubProject } from '../db'
 
-// Stabile Fallbacks: ein Literal an dieser Stelle wuerde bei jedem Render eine neue
+// Stabile Fallbacks: ein Literal an dieser Stelle würde bei jedem Render eine neue
 // Referenz erzeugen, solange die Live-Query noch kein Ergebnis geliefert hat.
 const EMPTY_PROJECTS: Project[] = []
 const EMPTY_SUB_PROJECTS: SubProject[] = []
