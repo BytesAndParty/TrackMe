@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, type RefObject } from 'react'
+import { useState, useEffect, useRef, useCallback, type RefObject } from 'react'
 import { useDebouncedCallback } from './useDebouncedCallback'
 import { type GridRowData } from './useGridRows'
 
@@ -10,9 +10,17 @@ export function useAutoSave(
 ) {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved')
 
-  const doCommit = useCallback(() => {
-    void commitAllDirty(setSaveStatus)
+  // commitAllDirty hängt an projects/subProjects aus useLiveQuery und bekommt bei jedem
+  // Dexie-Write eine neue Identität. Über das Ref bleiben die Effects unten stabil - sonst
+  // würde jeder Schreibvorgang ihr Cleanup auslösen und mitten im Tippen erneut speichern.
+  const commitRef = useRef(commitAllDirty)
+  useEffect(() => {
+    commitRef.current = commitAllDirty
   }, [commitAllDirty])
+
+  const doCommit = useCallback(() => {
+    void commitRef.current(setSaveStatus)
+  }, [])
 
   const { debounced: triggerDebouncedSave, cancel: cancelDebouncedSave } = useDebouncedCallback(doCommit, 500)
 
@@ -20,21 +28,21 @@ export function useAutoSave(
   useEffect(() => {
     return () => {
       cancelDebouncedSave()
-      void commitAllDirty(setSaveStatus)
+      void commitRef.current(setSaveStatus)
     }
-  }, [cancelDebouncedSave, commitAllDirty])
+  }, [cancelDebouncedSave])
 
   // Save when tab becomes hidden (fires reliably before browser freezes the page)
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
         cancelDebouncedSave()
-        void commitAllDirty(setSaveStatus)
+        void commitRef.current(setSaveStatus)
       }
     }
     document.addEventListener('visibilitychange', handleVisibilityChange)
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
-  }, [cancelDebouncedSave, commitAllDirty])
+  }, [cancelDebouncedSave])
 
   // Handle browser close/refresh (last-resort safety net)
   useEffect(() => {
@@ -42,14 +50,14 @@ export function useAutoSave(
       const hasDirty = rowsRef.current.some(r => r._dirty && r.startTime)
       if (hasDirty) {
         cancelDebouncedSave()
-        void commitAllDirty(setSaveStatus)
+        void commitRef.current(setSaveStatus)
         e.preventDefault()
         e.returnValue = ''
       }
     }
     window.addEventListener('beforeunload', handleBeforeUnload)
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
-  }, [cancelDebouncedSave, commitAllDirty, rowsRef])
+  }, [cancelDebouncedSave, rowsRef])
 
   return { saveStatus, setSaveStatus, triggerDebouncedSave, cancelDebouncedSave }
 }

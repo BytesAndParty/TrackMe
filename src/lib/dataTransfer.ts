@@ -1,10 +1,10 @@
 import * as XLSX from 'xlsx'
 import { z } from 'zod'
-import type { Item, Project, SubProject, TimeEntry, TodoTask, WorkItemLink } from '../db'
+import type { DraftRow, Item, Project, SubProject, TimeEntry, TodoTask, WorkItemLink } from '../db'
 import { parseTimeInput } from './parser'
 
 export const BACKUP_FORMAT = 'trackme-backup'
-export const BACKUP_VERSION = 1
+export const BACKUP_VERSION = 2
 
 export interface TrackMeData {
   projects: Project[]
@@ -13,11 +13,12 @@ export interface TrackMeData {
   timeEntries: TimeEntry[]
   items: Item[]
   todoTasks: TodoTask[]
+  draftRows: DraftRow[]
 }
 
 export interface TrackMeBackup {
   format: typeof BACKUP_FORMAT
-  version: typeof BACKUP_VERSION
+  version: 1 | 2
   exportedAt: string
   data: TrackMeData
 }
@@ -57,6 +58,9 @@ const subProjectSchema = z.object({
   projectId: z.number().int().positive(),
   key: z.string().min(1),
   name: z.string().min(1),
+  // Ältere Backups kennen das Feld noch nicht - ohne Default käme das Unterprojekt als
+  // inaktiv zurück und würde aus den Vorschlägen verschwinden.
+  active: z.boolean().default(true),
 })
 
 const workItemLinkSchema = z.object({
@@ -108,9 +112,25 @@ const todoTaskSchema = z.object({
   updatedAt: z.string(),
 })
 
+const draftRowSchema = z.object({
+  id: z.number().int().positive().optional(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  rowKey: z.string().min(1),
+  startTime: z.string(),
+  endTime: z.string(),
+  project: z.string(),
+  subProject: z.string(),
+  itemNr: z.string(),
+  itemTitle: z.string(),
+  taskText: z.string(),
+  notes: z.string(),
+  updatedAt: z.string(),
+})
+
 const backupSchema = z.object({
   format: z.literal(BACKUP_FORMAT),
-  version: z.literal(BACKUP_VERSION),
+  // Version 1 kannte draftRows noch nicht und bleibt weiterhin einlesbar.
+  version: z.union([z.literal(1), z.literal(2)]),
   exportedAt: z.string().datetime(),
   data: z.object({
     projects: z.array(projectSchema),
@@ -119,6 +139,7 @@ const backupSchema = z.object({
     timeEntries: z.array(timeEntrySchema),
     items: z.array(itemSchema),
     todoTasks: z.array(todoTaskSchema),
+    draftRows: z.array(draftRowSchema).default([]),
   }),
 })
 

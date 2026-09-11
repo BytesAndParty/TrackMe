@@ -14,6 +14,14 @@ const mocks = vi.hoisted(() => {
     })),
   }))
   const itemsAdd = vi.fn(async () => 1)
+  const draftRowsBulkPut = vi.fn(async () => undefined)
+  const draftRowsBulkDelete = vi.fn(async () => undefined)
+  const draftRowsWhere = vi.fn(() => ({
+    equals: vi.fn(() => ({
+      toArray: vi.fn(async () => []),
+      delete: vi.fn(async () => 0),
+    })),
+  }))
 
   return {
     timeEntriesAdd,
@@ -21,6 +29,9 @@ const mocks = vi.hoisted(() => {
     timeEntriesDelete,
     itemsWhere,
     itemsAdd,
+    draftRowsBulkPut,
+    draftRowsBulkDelete,
+    draftRowsWhere,
   }
 })
 
@@ -35,8 +46,17 @@ vi.mock('../../db', () => ({
       where: mocks.itemsWhere,
       add: mocks.itemsAdd,
     },
+    draftRows: {
+      where: mocks.draftRowsWhere,
+      bulkPut: mocks.draftRowsBulkPut,
+      bulkDelete: mocks.draftRowsBulkDelete,
+    },
     transaction: async (_mode: string, _tables: unknown[], cb: () => Promise<void>) => cb(),
   },
+}))
+
+vi.mock('dexie-react-hooks', () => ({
+  useLiveQuery: () => [],
 }))
 
 describe('EditableGrid', () => {

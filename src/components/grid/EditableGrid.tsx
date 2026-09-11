@@ -277,8 +277,8 @@ export default function EditableGrid({
     const subProjectChanged = !!row && row.subProject.toLowerCase() !== value.toLowerCase()
     updateCell(rowKey, 'subProject', value)
     if (subProjectChanged && row?.itemNr.trim()) {
+      // Setzen von itemNr auf '' löscht itemTitle bereits über die Sync-Logik in updateCell mit
       updateCell(rowKey, 'itemNr', '')
-      updateCell(rowKey, 'itemTitle', '')
     }
   }, [rows, updateCell])
 

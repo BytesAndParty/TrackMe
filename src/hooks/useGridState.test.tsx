@@ -17,6 +17,14 @@ const mocks = vi.hoisted(() => {
   }))
   const itemsAdd = vi.fn(async () => 99)
 
+  const draftRowsBulkPut = vi.fn(async () => undefined)
+  const draftRowsBulkDelete = vi.fn(async () => undefined)
+  const draftRowsDelete = vi.fn(async () => 0)
+  const draftRowsToArray = vi.fn(async () => [])
+  const draftRowsWhere = vi.fn(() => ({
+    equals: vi.fn(() => ({ toArray: draftRowsToArray, delete: draftRowsDelete })),
+  }))
+
   // Transaction mock: executes the callback immediately
   const transaction = vi.fn(async (_mode: string, _tables: unknown[], cb: () => Promise<void>) => {
     await cb()
@@ -30,6 +38,11 @@ const mocks = vi.hoisted(() => {
     itemsAdd,
     itemsFirst,
     todoItemsToArray,
+    draftRowsBulkPut,
+    draftRowsBulkDelete,
+    draftRowsDelete,
+    draftRowsToArray,
+    draftRowsWhere,
     transaction,
   }
 })
@@ -45,8 +58,17 @@ vi.mock('../db', () => ({
       where: mocks.itemsWhere,
       add: mocks.itemsAdd,
     },
+    draftRows: {
+      where: mocks.draftRowsWhere,
+      bulkPut: mocks.draftRowsBulkPut,
+      bulkDelete: mocks.draftRowsBulkDelete,
+    },
     transaction: mocks.transaction,
   },
+}))
+
+vi.mock('dexie-react-hooks', () => ({
+  useLiveQuery: () => [],
 }))
 
 describe('useGridState', () => {
@@ -56,6 +78,47 @@ describe('useGridState', () => {
 
   afterEach(() => {
     cleanup()
+  })
+
+  it('sichert eine unvollständige Zeile beim Unmount als Draft', async () => {
+    const { result, unmount } = renderHook(() => useGridState('2026-02-11', [], [], []))
+    const rowKey = result.current.rows[0]._key
+
+    // Kommentar ohne vollständige Zeiten: ergibt keine Zeitbuchung, darf aber nicht verloren gehen.
+    act(() => {
+      result.current.updateCell(rowKey, 'taskText', 'Telefonat mit Kunde')
+    })
+
+    unmount()
+
+    await waitFor(() => expect(mocks.draftRowsBulkPut).toHaveBeenCalled())
+    expect(mocks.timeEntriesAdd).not.toHaveBeenCalled()
+
+    const savedDrafts = mocks.draftRowsBulkPut.mock.calls.at(-1)![0]
+    expect(savedDrafts).toHaveLength(1)
+    expect(savedDrafts[0]).toMatchObject({
+      date: '2026-02-11',
+      rowKey,
+      taskText: 'Telefonat mit Kunde',
+    })
+  })
+
+  it('entfernt den Draft, sobald die Zeile eine gültige Zeitbuchung wird', async () => {
+    const { result } = renderHook(() => useGridState('2026-02-11', [], [], []))
+    const rowKey = result.current.rows[0]._key
+
+    act(() => {
+      result.current.updateCell(rowKey, 'taskText', 'Telefonat mit Kunde')
+      result.current.updateCell(rowKey, 'startTime', '09:00')
+      result.current.updateCell(rowKey, 'endTime', '10:00')
+    })
+
+    await act(async () => {
+      await result.current.commitRow(rowKey)
+    })
+
+    expect(mocks.timeEntriesAdd).toHaveBeenCalledTimes(1)
+    expect(mocks.draftRowsDelete).toHaveBeenCalled()
   })
 
   it('deduplicates concurrent commit calls for a new row', async () => {

@@ -7,6 +7,8 @@ export interface GridRowData {
   _dirty: boolean
   _isNew: boolean
   _pendingCommit?: boolean
+  /** Aus draftRows geladen bzw. dorthin gehörend: noch keine gültige Zeitbuchung. */
+  _draft?: boolean
   _notes: string
   startTime: string
   endTime: string
@@ -20,8 +22,11 @@ export interface GridRowData {
 export type EditableField = 'startTime' | 'endTime' | 'project' | 'subProject' | 'itemNr' | 'itemTitle' | 'taskText'
 
 let _rowKeyCounter = 0
+// Der Zähler startet bei jedem Laden neu, deshalb zusätzlich ein Sitzungspräfix: Draft-Zeilen
+// werden unter ihrem rowKey persistiert und dürfen sich über Sitzungen hinweg nicht überlagern.
+const _rowKeySession = Math.random().toString(36).slice(2, 8)
 function nextRowKey(): string {
-  return `row-${++_rowKeyCounter}`
+  return `row-${_rowKeySession}-${++_rowKeyCounter}`
 }
 
 export function createEmptyRow(): GridRowData {
@@ -119,12 +124,14 @@ export function useGridRows(
   projects: Project[],
   subProjects: SubProject[],
   items: Item[],
-  editingRows: RefObject<Map<string, number>>
+  editingRows: RefObject<Map<string, number>>,
+  draftRows: GridRowData[] = []
 ) {
   const initialRows = [createEmptyRow()]
   const [rows, setRows] = useState<GridRowData[]>(initialRows)
   const rowsRef = useRef<GridRowData[]>(initialRows)
   const lastSyncRef = useRef<string>('')
+  const adoptedDraftKeys = useRef<Set<string>>(new Set())
 
   const setRowsImmediate = useCallback((nextRows: GridRowData[]) => {
     rowsRef.current = nextRows
@@ -139,7 +146,9 @@ export function useGridRows(
 
   // Sync from DB when entries change (but not while editing or dirty)
   useEffect(() => {
-    const syncKey = dbEntries.map((e) => `${e.id}:${e.startTime}:${e.endTime}:${e.projectId}:${e.subProjectId}:${e.itemNr}:${e.taskText}`).join('|')
+    const entriesKey = dbEntries.map((e) => `${e.id}:${e.startTime}:${e.endTime}:${e.projectId}:${e.subProjectId}:${e.itemNr}:${e.taskText}`).join('|')
+    const pendingDraftKeys = draftRows.filter((d) => !adoptedDraftKeys.current.has(d._key)).map((d) => d._key)
+    const syncKey = `${entriesKey}#${pendingDraftKeys.join(',')}`
     if (syncKey === lastSyncRef.current) return
     lastSyncRef.current = syncKey
 
@@ -187,6 +196,15 @@ export function useGridRows(
     const dirtyNewRows = prev.filter((r) => !r._id && r._dirty && !newRows.some((n) => n._key === r._key))
     const mergedRows = dedupeRowsById([...newRows, ...dirtyNewRows])
 
+    // Gespeicherte Teilzeilen einmalig einmischen: sie haben keine gültige Zeitspanne und
+    // tauchen deshalb nie in dbEntries auf.
+    for (const draft of draftRows) {
+      if (adoptedDraftKeys.current.has(draft._key)) continue
+      if (mergedRows.some((r) => r._key === draft._key)) continue
+      adoptedDraftKeys.current.add(draft._key)
+      mergedRows.push(draft)
+    }
+
     // Ensure there's always an empty row at the end
     const hasEmpty = mergedRows.some((r) => r._isNew && !r._dirty)
     if (!hasEmpty) {
@@ -196,7 +214,7 @@ export function useGridRows(
     }
 
     setRowsImmediate(mergedRows)
-  }, [dbEntries, projects, subProjects, items, setRowsImmediate, editingRows])
+  }, [dbEntries, projects, subProjects, items, setRowsImmediate, editingRows, draftRows])
 
   return { rows, rowsRef, updateRows, setRows: setRowsImmediate }
 }

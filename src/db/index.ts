@@ -75,6 +75,26 @@ interface Setting {
   value: unknown
 }
 
+/**
+ * Unvollständige Grid-Zeile, die noch keine gültige Zeitbuchung ergibt (fehlende oder
+ * ungültige Zeiten). Wird getrennt von timeEntries gehalten, damit die Regel "Zeitbuchungen
+ * haben immer Start und Ende" gilt, Eingaben aber trotzdem den Seitenwechsel überleben.
+ */
+export interface DraftRow {
+  id?: number
+  date: string
+  rowKey: string
+  startTime: string
+  endTime: string
+  project: string
+  subProject: string
+  itemNr: string
+  itemTitle: string
+  taskText: string
+  notes: string
+  updatedAt: string
+}
+
 const db = new Dexie('TrackMeDB') as Dexie & {
   projects: EntityTable<Project, 'id'>
   subProjects: EntityTable<SubProject, 'id'>
@@ -83,6 +103,7 @@ const db = new Dexie('TrackMeDB') as Dexie & {
   items: EntityTable<Item, 'id'>
   todoTasks: EntityTable<TodoTask, 'id'>
   settings: EntityTable<Setting, 'key'>
+  draftRows: EntityTable<DraftRow, 'id'>
 }
 
 db.version(1).stores({
@@ -189,6 +210,17 @@ db.version(10).stores({
   items: '++id, projectId, subProjectId, itemNr, status, archived, sortOrder',
   todoTasks: '++id, sortOrder, linkedItemId, createdAt',
   settings: 'key',
+})
+
+db.version(11).stores({
+  projects: '++id, key, name, active',
+  subProjects: '++id, projectId, key, name, active',
+  workItemLinks: '++id, itemId, projectId, subProjectId',
+  timeEntries: '++id, date, projectId, subProjectId, workItemLinkId, itemNr',
+  items: '++id, projectId, subProjectId, itemNr, status, archived, sortOrder',
+  todoTasks: '++id, sortOrder, linkedItemId, createdAt',
+  settings: 'key',
+  draftRows: '++id, date, &rowKey',
 })
 
 export const PROJECT_COLORS = [

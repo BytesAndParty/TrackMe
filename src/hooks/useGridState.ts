@@ -1,10 +1,15 @@
-import { type TimeEntry, type Project, type SubProject, type Item } from '../db'
+import { useCallback, useMemo } from 'react'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { db, type TimeEntry, type Project, type SubProject, type Item } from '../db'
 import { useGridEditing } from './useGridEditing'
 import { useGridRows, createEmptyRow, type GridRowData, type EditableField } from './useGridRows'
 import { useGridPersist } from './useGridPersist'
-import { useAutoSave } from './useAutoSave'
+import { useAutoSave, type SaveStatus } from './useAutoSave'
+import { useDraftRows, draftToRow } from './useDraftRows'
 
 export type { GridRowData }
+
+const EMPTY_DRAFTS: GridRowData[] = []
 
 export function useGridState(
   date: string,
@@ -14,9 +19,29 @@ export function useGridState(
   items: Item[]
 ) {
   const { editingRows, markEditing, unmarkEditing } = useGridEditing()
-  const { rows, rowsRef, updateRows } = useGridRows(dbEntries, projects, subProjects, items, editingRows)
-  const { commitRow, commitAllDirty, deleteRow, undoDelete } = useGridPersist(date, projects, subProjects, rowsRef, updateRows, editingRows)
-  const { saveStatus, setSaveStatus, triggerDebouncedSave, cancelDebouncedSave } = useAutoSave(commitAllDirty, rowsRef)
+
+  const storedDrafts = useLiveQuery(() => db.draftRows.where('date').equals(date).toArray(), [date])
+  const draftRowsForDate = useMemo(
+    () => (storedDrafts ? storedDrafts.map(draftToRow) : EMPTY_DRAFTS),
+    [storedDrafts]
+  )
+
+  const { rows, rowsRef, updateRows } = useGridRows(dbEntries, projects, subProjects, items, editingRows, draftRowsForDate)
+  const { flushDrafts, clearDraft } = useDraftRows(date, rowsRef)
+  const { commitRow, commitAllDirty, deleteRow, undoDelete } = useGridPersist(date, projects, subProjects, rowsRef, updateRows, editingRows, clearDraft)
+
+  // Der Autosave schreibt gültige Zeilen in timeEntries und parkt den Rest als Draft,
+  // damit auch unvollständige Eingaben den Seitenwechsel überleben.
+  const commitAllAndDrafts = useCallback(
+    async (setStatus: (s: SaveStatus) => void) => {
+      const saved = await commitAllDirty(setStatus)
+      await flushDrafts()
+      return saved
+    },
+    [commitAllDirty, flushDrafts]
+  )
+
+  const { saveStatus, setSaveStatus, triggerDebouncedSave, cancelDebouncedSave } = useAutoSave(commitAllAndDrafts, rowsRef)
 
   function updateCell(rowKey: string, field: EditableField, value: string) {
     updateRows((prev) => {
@@ -65,7 +90,7 @@ export function useGridState(
   /** Cancel pending debounce, then commit all dirty rows. Use for navigation/unmount. */
   function flushAndCommitAll(): Promise<boolean> {
     cancelDebouncedSave()
-    return commitAllDirty(setSaveStatus)
+    return commitAllAndDrafts(setSaveStatus)
   }
 
   return {

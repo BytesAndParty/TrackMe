@@ -8,13 +8,19 @@ import { calculateDuration } from '../lib/parser'
 import { ensureBackupFolderPermission, useBackupFolder, writeBackupToFolder } from '../hooks/useBackupFolder'
 import { useProjectSubProjectLists } from '../hooks/useProjectSubProjectLists'
 
+// Excel erkennt die Kodierung einer CSV nur über die BOM - ohne sie landet man auf der
+// ANSI-Codepage und aus "Änderung" wird "Ã„nderung".
+const UTF8_BOM = '﻿'
+
 function download(content: BlobPart, fileName: string, type: string) {
   const url = URL.createObjectURL(new Blob([content], { type }))
   const link = document.createElement('a')
   link.href = url
   link.download = fileName
   link.click()
-  URL.revokeObjectURL(url)
+  // Erst freigeben, wenn der Browser den Download übernommen hat - ein sofortiges Revoke
+  // kann ihn abbrechen und eine leere Datei hinterlassen.
+  setTimeout(() => URL.revokeObjectURL(url), 10000)
 }
 
 function fileDate() {
@@ -42,6 +48,7 @@ export default function DataManagement() {
       projects: await db.projects.toArray(), subProjects: await db.subProjects.toArray(),
       workItemLinks: await db.workItemLinks.toArray(), timeEntries: await db.timeEntries.toArray(),
       items: await db.items.toArray(), todoTasks: await db.todoTasks.toArray(),
+      draftRows: await db.draftRows.toArray(),
     })
   }
 
@@ -66,10 +73,15 @@ export default function DataManagement() {
   }
 
   function exportEntries(format: 'csv' | 'xlsx') {
+    if (entries.length === 0) {
+      setMessage(t('data.exportEmpty'))
+      return
+    }
     const workbook = createTimeEntryWorkbook(createTimeEntryTransferRows(entries, projects, subProjects))
     const name = `trackme-zeiten-${fileDate()}`
+    setMessage('')
     if (format === 'xlsx') XLSX.writeFile(workbook, `${name}.xlsx`)
-    else download(XLSX.utils.sheet_to_csv(workbook.Sheets[workbook.SheetNames[0]]), `${name}.csv`, 'text/csv;charset=utf-8')
+    else download(UTF8_BOM + XLSX.utils.sheet_to_csv(workbook.Sheets[workbook.SheetNames[0]]), `${name}.csv`, 'text/csv;charset=utf-8')
   }
 
   async function selectBackup(file?: File) {
@@ -89,14 +101,15 @@ export default function DataManagement() {
     if (!confirmRestore) { setConfirmRestore(true); return }
     try {
       await saveBackupFile(JSON.stringify(await currentBackup(), null, 2), `trackme-before-restore-${fileDate()}.json`)
-      await db.transaction('rw', [db.projects, db.subProjects, db.workItemLinks, db.timeEntries, db.items, db.todoTasks], async () => {
-        await Promise.all([db.todoTasks.clear(), db.items.clear(), db.timeEntries.clear(), db.workItemLinks.clear(), db.subProjects.clear(), db.projects.clear()])
+      await db.transaction('rw', [db.projects, db.subProjects, db.workItemLinks, db.timeEntries, db.items, db.todoTasks, db.draftRows], async () => {
+        await Promise.all([db.todoTasks.clear(), db.items.clear(), db.timeEntries.clear(), db.workItemLinks.clear(), db.subProjects.clear(), db.projects.clear(), db.draftRows.clear()])
         if (backup.data.projects.length) await db.projects.bulkAdd(backup.data.projects)
         if (backup.data.subProjects.length) await db.subProjects.bulkAdd(backup.data.subProjects)
         if (backup.data.workItemLinks.length) await db.workItemLinks.bulkAdd(backup.data.workItemLinks)
         if (backup.data.timeEntries.length) await db.timeEntries.bulkAdd(backup.data.timeEntries)
         if (backup.data.items.length) await db.items.bulkAdd(backup.data.items)
         if (backup.data.todoTasks.length) await db.todoTasks.bulkAdd(backup.data.todoTasks)
+        if (backup.data.draftRows.length) await db.draftRows.bulkAdd(backup.data.draftRows)
       })
       setBackup(null); setConfirmRestore(false); setMessage(t('data.restoreSuccess'))
     } catch { setMessage(t('data.restoreError')) }

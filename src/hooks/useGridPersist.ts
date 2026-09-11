@@ -1,4 +1,4 @@
-import { useRef, useCallback, type RefObject } from 'react'
+import { useRef, useEffect, useCallback, type RefObject } from 'react'
 import { db, type Project, type SubProject } from '../db'
 import { calculateDuration } from '../lib/parser'
 import { type GridRowData, rowContentEqual, dedupeRowsById, createEmptyRow } from './useGridRows'
@@ -23,7 +23,8 @@ export function useGridPersist(
   subProjects: SubProject[],
   rowsRef: RefObject<GridRowData[]>,
   updateRows: (mutator: (prev: GridRowData[]) => GridRowData[]) => GridRowData[],
-  editingRows: RefObject<Map<string, number>>
+  editingRows: RefObject<Map<string, number>>,
+  clearDraft: (rowKey: string) => Promise<void>
 ) {
   const pendingCommits = useRef(new Map<string, Promise<void>>())
 
@@ -74,6 +75,9 @@ export function useGridPersist(
       insertedId = await db.timeEntries.add(entryData) as number
     }
 
+    // Die Zeile ist jetzt eine echte Zeitbuchung - ein evtl. vorhandener Draft ist damit hinfällig.
+    await clearDraft(rowKey)
+
     updateRows((prev) => {
       const idx = prev.findIndex((r) => r._key === rowKey)
       if (idx < 0) return prev
@@ -87,11 +91,12 @@ export function useGridPersist(
         _id: resolvedId,
         _dirty: contentUnchanged ? false : current._dirty,
         _isNew: false,
+        _draft: false,
         _pendingCommit: false,
       }
       return dedupeRowsById(updated)
     })
-  }, [date, projects, subProjects, rowsRef, updateRows])
+  }, [date, projects, subProjects, rowsRef, updateRows, clearDraft])
 
   const commitRow = useCallback((rowKey: string): Promise<void> => {
     const inFlight = pendingCommits.current.get(rowKey)
@@ -111,24 +116,25 @@ export function useGridPersist(
       return true
     }
 
-    // Unvollständige oder überlappende Zeilen überspringen, aber die gültigen
-    // Zeilen trotzdem schreiben - sonst gehen sie beim Verlassen der Ansicht verloren.
-    const rowsWithTimeInput = dirtyRows.filter((row) => row.startTime || row.endTime)
-    const rowsToCommit = rowsWithTimeInput.filter(
+    // Unvollständige Zeilen überspringen - sie werden als Draft gesichert und gehen deshalb
+    // nicht verloren. Nur Überlappungen bleiben ein echter Fehler, den der Nutzer auflösen muss.
+    const rowsToCommit = dirtyRows.filter(
       (row) => hasValidTimeRange(row) && !overlapsAnotherRow(row, rowsRef.current)
     )
-    const hasInvalidRows = rowsToCommit.length < rowsWithTimeInput.length
+    const hasOverlappingRows = dirtyRows.some(
+      (row) => hasValidTimeRange(row) && overlapsAnotherRow(row, rowsRef.current)
+    )
 
     if (rowsToCommit.length === 0) {
-      setSaveStatus(hasInvalidRows ? 'error' : 'saved')
-      return !hasInvalidRows
+      setSaveStatus(hasOverlappingRows ? 'error' : 'saved')
+      return !hasOverlappingRows
     }
 
     setSaveStatus('saving')
     try {
       await Promise.all(rowsToCommit.map((row) => commitRow(row._key)))
-      setSaveStatus(hasInvalidRows ? 'error' : 'saved')
-      return !hasInvalidRows
+      setSaveStatus(hasOverlappingRows ? 'error' : 'saved')
+      return !hasOverlappingRows
     } catch (e) {
       console.error('Failed to save entries:', e)
       setSaveStatus('error')
@@ -150,6 +156,8 @@ export function useGridPersist(
     const row = rowsRef.current.find((r) => r._key === rowKey)
     if (!row) return
 
+    void clearDraft(rowKey)
+
     // Remove from UI immediately
     updateRows((prev) => {
       const updated = prev.filter((r) => r._key !== rowKey)
@@ -167,7 +175,19 @@ export function useGridPersist(
     }, 5000)
 
     pendingDeleteRef.current = { row, timeoutId }
-  }, [rowsRef, updateRows, editingRows])
+  }, [rowsRef, updateRows, editingRows, clearDraft])
+
+  // Ein beim Unmount noch offener Delete wurde nicht widerrufen (undoDelete leert das Ref)
+  // und muss trotzdem in der DB landen - sonst bliebe der Eintrag verwaist zurück.
+  useEffect(() => {
+    return () => {
+      const pending = pendingDeleteRef.current
+      if (!pending) return
+      clearTimeout(pending.timeoutId)
+      if (pending.row._id) void db.timeEntries.delete(pending.row._id)
+      pendingDeleteRef.current = null
+    }
+  }, [])
 
   const undoDelete = useCallback(() => {
     const pending = pendingDeleteRef.current
