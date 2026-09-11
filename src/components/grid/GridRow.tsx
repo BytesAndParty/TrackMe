@@ -185,7 +185,7 @@ export const GridRow = React.memo(function GridRow({
 
       {/* Item Title (read-only, double-click opens detail) */}
       <td
-        className="grid-cell"
+        className="grid-cell min-w-0"
         data-row-key={row._key}
         data-col={5}
         onDoubleClick={() => {
