@@ -443,7 +443,13 @@ export default function EditableGrid({
           defaultItemNr={createItemValueIsNumeric ? createItemRequest.value : ''}
           defaultTitle={createItemValueIsNumeric ? '' : createItemRequest.value}
           onCreated={(item) => handleItemCreated(createItemRequest.rowKey, item)}
-          onClose={() => setCreateItemRequest(null)}
+          onClose={() => {
+            // Cancel: revert the unresolved item text so the cell reflects what is actually
+            // persisted (ein unaufgelöster Wert ohne Item wäre sonst ein verwaister itemNr-Wert).
+            updateCell(createItemRequest.rowKey, 'itemNr', '')
+            focusCell(createItemRequest.rowKey, 4)
+            setCreateItemRequest(null)
+          }}
         />
       )}
 
