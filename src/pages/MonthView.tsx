@@ -3,21 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useTranslation } from 'react-i18next'
 import { db } from '../db'
-import { formatDuration, toLocalISO, getISOWeek, getMondayOfWeek } from '../lib/parser'
+import { formatDuration, toLocalISO, getISOWeek, getMondayOfWeek, WEEKDAYS_SHORT, MONTHS_SHORT } from '../lib/parser'
 
 interface WeekRow {
   weekNumber: number
   mondayDate: string
   days: (string | null)[]
-}
-
-function getDayLabels(locale: string): string[] {
-  const monday = new Date(Date.UTC(2024, 0, 1))
-  return Array.from({ length: 7 }, (_, index) =>
-    new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(
-      new Date(monday.getTime() + index * 86400000)
-    )
-  )
 }
 
 function getMonthWeeks(year: number, month: number): WeekRow[] {
@@ -51,14 +42,13 @@ function getMonthWeeks(year: number, month: number): WeekRow[] {
 }
 
 export default function MonthView() {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const nav = useNavigate()
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth())
-  const locale = i18n.resolvedLanguage === 'en' ? 'en-US' : 'de-DE'
-  const monthLabel = new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(new Date(year, month, 1))
-  const dayLabels = getDayLabels(locale)
+  const monthLabel = `${MONTHS_SHORT[month]} ${year}`
+  const dayLabels = [...WEEKDAYS_SHORT.slice(1), WEEKDAYS_SHORT[0]]
 
   const firstISO = `${year}-${String(month + 1).padStart(2, '0')}-01`
   const lastISO = `${year}-${String(month + 1).padStart(2, '0')}-${String(new Date(year, month + 1, 0).getDate()).padStart(2, '0')}`

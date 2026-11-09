@@ -7,7 +7,7 @@ import { db } from "../db";
 import {
 	todayISO,
 	toLocalISO,
-	formatDateLong,
+	formatDateFixedWidth,
 	formatDuration,
 	calculateDuration,
 } from "../lib/parser";
@@ -299,9 +299,9 @@ export default function DayView() {
 							/>
 						</svg>
 					</button>
-					<div>
-						<h1 className="text-2xl font-bold tracking-tight">
-							{formatDateLong(selectedDate)}
+					<div className="w-56">
+						<h1 className="text-2xl font-mono font-medium tracking-tight">
+							{formatDateFixedWidth(selectedDate)}
 						</h1>
 						<p className="text-slate-500 dark:text-slate-400 text-sm">
 							{t("dayView.entriesCount", {

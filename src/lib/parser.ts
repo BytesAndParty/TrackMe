@@ -1,5 +1,3 @@
-import i18n from '../i18n'
-
 /**
  * Smart time input parser. Accepts various formats:
  * - "0900" / "900"  → "09:00"
@@ -90,24 +88,21 @@ export function getWeekDates(date: Date): string[] {
   })
 }
 
+// English 3-letter names, independent of the UI language. Indexed like Date#getDay() / Date#getMonth().
+export const WEEKDAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+export const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
 export function formatDateShort(isoDate: string): string {
   const d = new Date(isoDate + 'T00:00:00')
-  return d.toLocaleDateString(getDateLocale(), { weekday: 'short', day: 'numeric', month: 'numeric' })
+  return `${WEEKDAYS_SHORT[d.getDay()]} ${d.getDate()} ${MONTHS_SHORT[d.getMonth()]}`
 }
 
-export function formatDateLong(isoDate: string): string {
+// Same character count for every date (zero-padded day, 3-letter weekday and month), so the
+// day navigation does not shift when stepping through days. Render with a monospace font.
+export function formatDateFixedWidth(isoDate: string): string {
   const d = new Date(isoDate + 'T00:00:00')
-  return d.toLocaleDateString(getDateLocale(), {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  })
-}
-
-function getDateLocale(): string {
-  const language = i18n.resolvedLanguage ?? i18n.language
-  return language.startsWith('en') ? 'en-US' : 'de-DE'
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${WEEKDAYS_SHORT[d.getDay()]} ${day} ${MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}`
 }
 
 export function getISOWeek(date: Date): number {
