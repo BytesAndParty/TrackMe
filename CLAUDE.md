@@ -20,6 +20,7 @@ Lokale Zeiterfassung als Progressive Web App (React/TypeScript/Vite). Alle Daten
 - Umlaute (ä, ö, ü, ß) in Code, Strings und Kommentaren verwenden, keine ASCII-Ersatzschreibweisen. Bestehende ASCII-Stellen nicht drive-by mitkorrigieren.
 - `bun run test` (Vitest) verwenden, **nicht** `bun test`.
 - Vor Abschluss: passender Test + `bun run build`.
+- Vor Web-UI-Code (HTML/CSS/Client-JS: Dialoge, Formulare, Grid-Eingabe, Fokus, A11y, Performance) den globalen Skill `modern-web-guidance` nutzen: `bunx modern-web-guidance@latest search "<2-5 Wörter>"`, dann `retrieve <id>` (der Skill nennt `npx`, hier Bun). Nicht für Dexie, Parser oder Build-Tooling.
 
 ## Arbeitsweise / Git
 
